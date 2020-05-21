@@ -1,8 +1,14 @@
 use clap::{App, Arg};
-use log::info;
+pub use lexer::Lexer;
+use log::{error, info};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
+pub use token_type::TokenType;
+
+mod lexer;
+mod token;
+mod token_type;
 
 fn main() -> io::Result<()> {
     let matches = App::new("lox-rust")
@@ -27,7 +33,7 @@ fn main() -> io::Result<()> {
 
     let log_level = match matches.occurrences_of("debug") {
         0 => log::LevelFilter::Error,
-        1 => log::LevelFilter::Info,
+        1 => log::LevelFilter::Debug,
         _ => log::LevelFilter::Debug,
     };
     env_logger::builder().filter_level(log_level).init();
@@ -48,23 +54,40 @@ fn run_file(path: &str) -> io::Result<()> {
     let f = BufReader::new(f);
     let mut source = String::from("");
     for line in f.lines() {
+        print!(">");
         source.push_str(&line.unwrap());
+        source.push_str("\n")
     }
-    run(source);
+    run(&source);
 
     Ok(())
 }
 
 fn run_prompt() -> io::Result<()> {
     let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    print!("> ");
+    stdout.flush().unwrap();
     let mut source = String::from("");
     for line in stdin.lock().lines() {
         source.push_str(&line.unwrap());
+        run(&source);
+        print!("> ");
+        stdout.flush().unwrap();
     }
-    run(source);
     Ok(())
 }
 
-fn run(source: String) {
-    println!("{}", source)
+fn run(source: &str) {
+    let mut lexer = lexer::Lexer::new(source);
+    let tokens = lexer.tokenizeAll();
+    println!("tokens: {:#?}", tokens)
+}
+
+fn report(line: i32, place: &str, message: &str) {
+    error!("[line {}] Error {}: {}", line, place, message);
+}
+
+fn error(line: i32, message: &str) {
+    report(line, "", message)
 }
