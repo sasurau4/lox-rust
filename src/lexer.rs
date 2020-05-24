@@ -2,6 +2,7 @@ use super::error::error;
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
 use super::token_type::TokenType::*;
+use std::collections::HashMap;
 
 pub struct Lexer<'a> {
     source: &'a str,
@@ -9,16 +10,35 @@ pub struct Lexer<'a> {
     start: usize,
     current: usize,
     line: usize,
+    keywords: HashMap<&'a str, TokenType>,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(source: &str) -> Lexer {
+        let mut keywords = HashMap::new();
+        keywords.insert("and", TokenType::And);
+        keywords.insert("class", TokenType::Class);
+        keywords.insert("else", TokenType::Else);
+        keywords.insert("false", TokenType::False);
+        keywords.insert("for", TokenType::For);
+        keywords.insert("fun", TokenType::Fun);
+        keywords.insert("if", TokenType::If);
+        keywords.insert("nil", TokenType::Nil);
+        keywords.insert("or", TokenType::Or);
+        keywords.insert("print", TokenType::Print);
+        keywords.insert("return", TokenType::Return);
+        keywords.insert("super", TokenType::Super);
+        keywords.insert("this", TokenType::This);
+        keywords.insert("true", TokenType::True);
+        keywords.insert("var", TokenType::Var);
+        keywords.insert("while", TokenType::While);
         Lexer {
             source,
             tokens: vec![],
             start: 0,
             current: 0,
             line: 0,
+            keywords,
         }
     }
 
@@ -95,6 +115,7 @@ impl<'a> Lexer<'a> {
             '\n' => self.line += 1,
             '"' => self.string(),
             '0'..='9' => self.number(),
+            'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
             _ => error(self.line, "Unexpected character."),
         }
     }
@@ -192,5 +213,26 @@ impl<'a> Lexer<'a> {
             panic!("")
         };
         self.add_token_with_literal(TokenType::Number, literal)
+    }
+
+    fn identifier(&mut self) {
+        while is_alpha_numeric(self.peek()) {
+            self.advance();
+        }
+        let range = self.start..self.current;
+        let text = self.source.get(range).unwrap();
+        // Memo: using match instead of HashMap is more perfomant?
+        let keywords = self.keywords.clone();
+        let token = keywords.get(&text).unwrap_or(&TokenType::Identifier);
+
+        self.add_token_without_literal(token.clone());
+    }
+}
+
+// Helpers
+fn is_alpha_numeric(c: char) -> bool {
+    match c {
+        'a'..='z' | 'A'..='Z' | '_' | '0'..='9' => true,
+        _ => false,
     }
 }
