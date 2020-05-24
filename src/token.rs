@@ -1,11 +1,18 @@
 use super::token_type::TokenType;
-use std::fmt;
+
+#[derive(Debug, Clone, Copy)]
+pub enum Literal<'a> {
+    Usize(usize),
+    String(&'a str),
+    Float(f64),
+    None,
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Token<'a> {
     token_type: TokenType,
     lexeme: &'a str,
-    literal: Option<&'a str>,
+    literal: Literal<'a>,
     line: usize,
 }
 
@@ -13,7 +20,7 @@ impl<'a> Token<'a> {
     pub fn new(
         token_type: TokenType,
         lexeme: &'a str,
-        literal: Option<&'a str>,
+        literal: Literal<'a>,
         line: usize,
     ) -> Token<'a> {
         Token {
@@ -22,17 +29,5 @@ impl<'a> Token<'a> {
             literal,
             line,
         }
-    }
-}
-
-impl<'a> fmt::Display for Token<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{} {} {}",
-            self.token_type,
-            self.lexeme,
-            self.literal.unwrap_or("none")
-        )
     }
 }

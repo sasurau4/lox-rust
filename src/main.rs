@@ -1,11 +1,12 @@
 use clap::{App, Arg};
 pub use lexer::Lexer;
-use log::{error, info};
+use log::info;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
 pub use token_type::TokenType;
 
+mod error;
 mod lexer;
 mod token;
 mod token_type;
@@ -72,6 +73,7 @@ fn run_prompt() -> io::Result<()> {
     for line in stdin.lock().lines() {
         source.push_str(&line.unwrap());
         run(&source);
+        source = String::from("");
         print!("> ");
         stdout.flush().unwrap();
     }
@@ -80,14 +82,6 @@ fn run_prompt() -> io::Result<()> {
 
 fn run(source: &str) {
     let mut lexer = lexer::Lexer::new(source);
-    let tokens = lexer.tokenizeAll();
+    let tokens = lexer.tokenize_all();
     println!("tokens: {:#?}", tokens)
-}
-
-fn report(line: i32, place: &str, message: &str) {
-    error!("[line {}] Error {}: {}", line, place, message);
-}
-
-fn error(line: i32, message: &str) {
-    report(line, "", message)
 }
