@@ -51,31 +51,31 @@ fn main() -> io::Result<()> {
         literal: token::Literal::None,
         line: 1,
     };
-    let one_two_three = Expr::Literal(expr::Literal {
+    let one_two_three = Expr::Literal {
         value: token::Literal::Usize(123),
-    });
+    };
     let star_token = Token {
         token_type: TokenType::Star,
         lexeme: "*",
         literal: token::Literal::None,
         line: 1,
     };
-    let four_five_point = Expr::Grouping(expr::Grouping {
-        expression: Box::new(Expr::Literal(expr::Literal {
+    let four_five_point = Expr::Grouping {
+        expression: Box::new(Expr::Literal {
             value: token::Literal::Float(45.67),
-        })),
-    });
+        }),
+    };
 
-    let unary = Expr::Unary(expr::Unary {
+    let unary = Expr::Unary {
         operator: minus_token,
         right: Box::new(one_two_three),
-    });
+    };
 
-    let expression = Expr::Binary(expr::Binary {
+    let expression = Expr::Binary {
         left: Box::new(unary),
         operator: star_token,
         right: Box::new(four_five_point),
-    });
+    };
     let ast_printer = AstPrinter {};
     println!("result: {}", ast_printer.print(expression));
 

@@ -1,5 +1,5 @@
-use super::expr::{Acceptor, Binary, Expr, Grouping, Literal, Unary, Visitor};
-use super::token::Literal as LiteralToken;
+use super::expr::{Acceptor, Expr, Visitor};
+use super::token::{Literal, Token};
 
 #[derive(Debug, Clone, Copy)]
 pub struct AstPrinter {}
@@ -22,25 +22,25 @@ impl<'a> AstPrinter {
     }
 }
 
-impl Visitor<String> for AstPrinter {
-    // fn visit_expr(self, expr: Expr) -> String {
-    //     String::from("piyo")
-    // }
-    fn visit_binary(self, expr: Binary) -> String {
-        self.parenthesize(expr.operator.lexeme, vec![*expr.left, *expr.right])
+impl<'a> Visitor<'a, String> for AstPrinter {
+    fn visit_binary(self, left: Expr, operator: Token, right: Expr) -> String {
+        self.parenthesize(operator.lexeme, vec![left, right])
     }
-    fn visit_grouping(self, expr: Grouping) -> String {
-        self.parenthesize("group", vec![*expr.expression])
-    }
-    fn visit_literal(self, expr: Literal) -> String {
-        match expr.value {
-            LiteralToken::None => String::from("nil"),
-            LiteralToken::Usize(u) => u.to_string(),
-            LiteralToken::Float(f) => f.to_string(),
-            LiteralToken::String(s) => String::from(s),
+    fn visit_grouping(self, expr: Expr) -> String {
+        match expr {
+            Expr::Grouping { expression } => self.parenthesize("group", vec![*expression]),
+            _ => unreachable!(),
         }
     }
-    fn visit_unary(self, expr: Unary) -> String {
-        self.parenthesize(expr.operator.lexeme, vec![*expr.right])
+    fn visit_literal(self, expr: Literal) -> String {
+        match expr {
+            Literal::None => String::from("nil"),
+            Literal::Usize(u) => u.to_string(),
+            Literal::Float(f) => f.to_string(),
+            Literal::String(s) => String::from(s),
+        }
+    }
+    fn visit_unary(self, operator: Token, right: Expr) -> String {
+        self.parenthesize(operator.lexeme, vec![right])
     }
 }

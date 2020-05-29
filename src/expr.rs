@@ -1,80 +1,48 @@
 use super::token;
 use super::token::Token;
 
-pub trait Visitor<T> {
-    // fn visit_expr(self, expr: Expr) -> T;
-    fn visit_binary(self, expr: Binary) -> T;
-    fn visit_grouping(self, expr: Grouping) -> T;
-    fn visit_literal(self, expr: Literal) -> T;
-    fn visit_unary(self, expr: Unary) -> T;
+pub trait Visitor<'a, T> {
+    fn visit_binary(self, left: Expr, operator: Token, right: Expr) -> T;
+    fn visit_grouping(self, expr: Expr) -> T;
+    fn visit_literal(self, expr: token::Literal) -> T;
+    fn visit_unary(self, operator: Token, right: Expr) -> T;
 }
 
-pub trait Acceptor<T> {
-    fn accept(self, visitor: impl Visitor<T>) -> T;
+pub trait Acceptor<'a, T> {
+    fn accept(self, visitor: impl Visitor<'a, T>) -> T;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum Expr<'a> {
-    Binary(Binary<'a>),
-    Unary(Unary<'a>),
-    Grouping(Grouping<'a>),
-    Literal(Literal<'a>),
+    Binary {
+        left: Box<Expr<'a>>,
+        operator: Token<'a>,
+        right: Box<Expr<'a>>,
+    },
+    Unary {
+        operator: Token<'a>,
+        right: Box<Expr<'a>>,
+    },
+    Grouping {
+        expression: Box<Expr<'a>>,
+    },
+    Literal {
+        value: token::Literal<'a>,
+    },
 }
 
-impl<'a, T> Acceptor<T> for Expr<'a> {
-    fn accept(self, visitor: impl Visitor<T>) -> T {
+impl<'a, T> Acceptor<'a, T> for Expr<'a> {
+    fn accept(self, visitor: impl Visitor<'a, T>) -> T {
+        println!("Debug from acceptor: {:?}", self);
         match self {
-            Expr::Binary(binary) => visitor.visit_binary(binary),
-            Expr::Unary(unary) => visitor.visit_unary(unary),
-            Expr::Grouping(grouping) => visitor.visit_grouping(grouping),
-            Expr::Literal(literal) => visitor.visit_literal(literal),
+            Expr::Binary {
+                left,
+                operator,
+                right,
+            } => visitor.visit_binary(*left, operator, *right),
+            Expr::Unary { operator, right } => visitor.visit_unary(operator, *right),
+            Expr::Grouping { expression } => visitor.visit_grouping(Expr::Grouping { expression }),
+            Expr::Literal { value } => visitor.visit_literal(value),
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Binary<'a> {
-    pub left: Box<Expr<'a>>,
-    pub operator: Token<'a>,
-    pub right: Box<Expr<'a>>,
-}
-
-impl<'a, T> Acceptor<T> for Binary<'a> {
-    fn accept(self, visitor: impl Visitor<T>) -> T {
-        visitor.visit_binary(self)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Grouping<'a> {
-    pub expression: Box<Expr<'a>>,
-}
-
-impl<'a, T> Acceptor<T> for Grouping<'a> {
-    fn accept(self, visitor: impl Visitor<T>) -> T {
-        visitor.visit_grouping(self)
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Literal<'a> {
-    pub value: token::Literal<'a>,
-}
-
-impl<'a, T> Acceptor<T> for Literal<'a> {
-    fn accept(self, visitor: impl Visitor<T>) -> T {
-        visitor.visit_literal(self)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Unary<'a> {
-    pub operator: Token<'a>,
-    pub right: Box<Expr<'a>>,
-}
-
-impl<'a, T> Acceptor<T> for Unary<'a> {
-    fn accept(self, visitor: impl Visitor<T>) -> T {
-        visitor.visit_unary(self)
     }
 }
