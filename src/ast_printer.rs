@@ -4,15 +4,15 @@ use super::token::{Literal, Token};
 #[derive(Debug, Clone, Copy)]
 pub struct AstPrinter {}
 
-impl<'a> AstPrinter {
+impl AstPrinter {
     pub fn print(self, expr: Expr) -> String {
         expr.accept(self)
     }
 
-    fn parenthesize(self, name: &str, exprs: Vec<Expr>) -> String {
+    fn parenthesize(self, name: String, exprs: Vec<Expr>) -> String {
         let mut string = String::new();
         string.push_str("(");
-        string.push_str(name);
+        string.push_str(&name);
         for expr in exprs {
             string.push_str(" ");
             string.push_str(&expr.accept(self))
@@ -22,13 +22,15 @@ impl<'a> AstPrinter {
     }
 }
 
-impl<'a> Visitor<'a, String> for AstPrinter {
+impl Visitor<String> for AstPrinter {
     fn visit_binary(self, left: Expr, operator: Token, right: Expr) -> String {
         self.parenthesize(operator.lexeme, vec![left, right])
     }
     fn visit_grouping(self, expr: Expr) -> String {
         match expr {
-            Expr::Grouping { expression } => self.parenthesize("group", vec![*expression]),
+            Expr::Grouping { expression } => {
+                self.parenthesize(String::from("group"), vec![*expression])
+            }
             _ => unreachable!(),
         }
     }

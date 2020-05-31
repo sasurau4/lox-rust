@@ -1,7 +1,7 @@
 use super::token_type::TokenType;
 // use std::fmt;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Literal {
     Usize(usize),
     String(String),

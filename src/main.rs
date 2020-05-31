@@ -118,13 +118,13 @@ fn run_prompt() -> io::Result<()> {
 }
 
 fn run(source: &str) {
-    let mut lexer = lexer::Lexer::new(source);
+    let mut lexer = lexer::Lexer::new(String::from(source));
     let tokens = lexer.tokenize_all();
-    // let mut parser = Parser::new(tokens);
-    // let expression = match parser.parse() {
-    //     Ok(result) => result,
-    //     _ => return,
-    // };
-    // let ast_printer = AstPrinter {};
-    // println!("result: {}", ast_printer.print(expression));
+    let mut parser = Parser::new(tokens);
+    let expression = match parser.parse() {
+        Ok(result) => result,
+        _ => return,
+    };
+    let ast_printer = AstPrinter {};
+    println!("result: {}", ast_printer.print(expression));
 }

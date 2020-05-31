@@ -188,7 +188,7 @@ impl Lexer {
         // The closing ".
         self.advance();
 
-        let value = self.source.get(self.start + 1..self.current - 1).unwrap();
+        let value = String::from(self.source.get(self.start + 1..self.current - 1).unwrap());
         self.add_token_with_literal(TokenType::String, Literal::String(value));
     }
 
