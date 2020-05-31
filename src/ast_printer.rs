@@ -38,6 +38,7 @@ impl<'a> Visitor<'a, String> for AstPrinter {
             Literal::Usize(u) => u.to_string(),
             Literal::Float(f) => f.to_string(),
             Literal::String(s) => String::from(s),
+            Literal::Bool(b) => b.to_string(),
         }
     }
     fn visit_unary(self, operator: Token, right: Expr) -> String {

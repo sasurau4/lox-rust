@@ -12,7 +12,7 @@ pub trait Acceptor<'a, T> {
     fn accept(self, visitor: impl Visitor<'a, T>) -> T;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expr<'a> {
     Binary {
         left: Box<Expr<'a>>,
@@ -33,7 +33,6 @@ pub enum Expr<'a> {
 
 impl<'a, T> Acceptor<'a, T> for Expr<'a> {
     fn accept(self, visitor: impl Visitor<'a, T>) -> T {
-        println!("Debug from acceptor: {:?}", self);
         match self {
             Expr::Binary {
                 left,

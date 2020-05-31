@@ -1,4 +1,4 @@
-use super::error::error;
+use super::error::lexer_error;
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
 use super::token_type::TokenType::*;
@@ -116,7 +116,7 @@ impl<'a> Lexer<'a> {
             '"' => self.string(),
             '0'..='9' => self.number(),
             'a'..='z' | 'A'..='Z' | '_' => self.identifier(),
-            _ => error(self.line, "Unexpected character."),
+            _ => lexer_error(self.line, "Unexpected character."),
         }
     }
 
@@ -174,7 +174,7 @@ impl<'a> Lexer<'a> {
 
         // Unterminated string.
         if self.is_at_end() {
-            error(self.line, "Unterminated string.");
+            lexer_error(self.line, "Unterminated string.");
             return;
         }
 
@@ -209,7 +209,7 @@ impl<'a> Lexer<'a> {
         } else if parsed_float.is_ok() {
             Literal::Float(parsed_float.ok().unwrap())
         } else {
-            error(self.line, "Unexpected character.");
+            lexer_error(self.line, "Unexpected character.");
             panic!("")
         };
         self.add_token_with_literal(TokenType::Number, literal)

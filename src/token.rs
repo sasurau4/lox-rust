@@ -6,6 +6,7 @@ pub enum Literal<'a> {
     Usize(usize),
     String(&'a str),
     Float(f64),
+    Bool(bool),
     None,
 }
 
