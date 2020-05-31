@@ -1,37 +1,36 @@
 use super::error::lexer_error;
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
-use super::token_type::TokenType::*;
 use std::collections::HashMap;
 
-pub struct Lexer<'a> {
-    source: &'a str,
-    tokens: Vec<Token<'a>>,
+pub struct Lexer {
+    source: String,
+    tokens: Vec<Token>,
     start: usize,
     current: usize,
     line: usize,
-    keywords: HashMap<&'a str, TokenType>,
+    keywords: HashMap<String, TokenType>,
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(source: &str) -> Lexer {
+impl Lexer {
+    pub fn new(source: String) -> Lexer {
         let mut keywords = HashMap::new();
-        keywords.insert("and", TokenType::And);
-        keywords.insert("class", TokenType::Class);
-        keywords.insert("else", TokenType::Else);
-        keywords.insert("false", TokenType::False);
-        keywords.insert("for", TokenType::For);
-        keywords.insert("fun", TokenType::Fun);
-        keywords.insert("if", TokenType::If);
-        keywords.insert("nil", TokenType::Nil);
-        keywords.insert("or", TokenType::Or);
-        keywords.insert("print", TokenType::Print);
-        keywords.insert("return", TokenType::Return);
-        keywords.insert("super", TokenType::Super);
-        keywords.insert("this", TokenType::This);
-        keywords.insert("true", TokenType::True);
-        keywords.insert("var", TokenType::Var);
-        keywords.insert("while", TokenType::While);
+        keywords.insert(String::from("and"), TokenType::And);
+        keywords.insert(String::from("class"), TokenType::Class);
+        keywords.insert(String::from("else"), TokenType::Else);
+        keywords.insert(String::from("false"), TokenType::False);
+        keywords.insert(String::from("for"), TokenType::For);
+        keywords.insert(String::from("fun"), TokenType::Fun);
+        keywords.insert(String::from("if"), TokenType::If);
+        keywords.insert(String::from("nil"), TokenType::Nil);
+        keywords.insert(String::from("or"), TokenType::Or);
+        keywords.insert(String::from("print"), TokenType::Print);
+        keywords.insert(String::from("return"), TokenType::Return);
+        keywords.insert(String::from("super"), TokenType::Super);
+        keywords.insert(String::from("this"), TokenType::This);
+        keywords.insert(String::from("true"), TokenType::True);
+        keywords.insert(String::from("var"), TokenType::Var);
+        keywords.insert(String::from("while"), TokenType::While);
         Lexer {
             source,
             tokens: vec![],
@@ -47,8 +46,12 @@ impl<'a> Lexer<'a> {
             self.start = self.current;
             self.tokenize()
         }
-        self.tokens
-            .push(Token::new(EOF, "", Literal::None, self.line));
+        self.tokens.push(Token::new(
+            TokenType::EOF,
+            String::from(""),
+            Literal::None,
+            self.line,
+        ));
         self.tokens.clone()
     }
 
@@ -133,10 +136,14 @@ impl<'a> Lexer<'a> {
         self.add_token_with_literal(token_type, Literal::None)
     }
 
-    fn add_token_with_literal(&mut self, token_type: TokenType, literal: Literal<'a>) {
+    fn add_token_with_literal(&mut self, token_type: TokenType, literal: Literal) {
         let text = self.source.get(self.start..self.current).unwrap();
-        self.tokens
-            .push(Token::new(token_type, text, literal, self.line))
+        self.tokens.push(Token::new(
+            token_type,
+            String::from(text),
+            literal,
+            self.line,
+        ))
     }
 
     fn match_to_expected(&mut self, expected: char) -> bool {
@@ -223,7 +230,7 @@ impl<'a> Lexer<'a> {
         let text = self.source.get(range).unwrap();
         // Memo: using match instead of HashMap is more perfomant?
         let keywords = self.keywords.clone();
-        let token = keywords.get(&text).unwrap_or(&TokenType::Identifier);
+        let token = keywords.get(text).unwrap_or(&TokenType::Identifier);
 
         self.add_token_without_literal(token.clone());
     }

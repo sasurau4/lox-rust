@@ -9,13 +9,13 @@ pub struct ParserError(String);
 type ParseResult<T> = Result<T, ParserError>;
 
 #[derive(Debug, Clone)]
-pub struct Parser<'a> {
-    tokens: Vec<Token<'a>>,
+pub struct Parser {
+    tokens: Vec<Token>,
     current: usize,
 }
 
-impl<'a> Parser<'a> {
-    pub fn new(tokens: Vec<Token<'a>>) -> Parser {
+impl Parser {
+    pub fn new(tokens: Vec<Token>) -> Parser {
         Parser { tokens, current: 0 }
     }
 
@@ -28,19 +28,17 @@ impl<'a> Parser<'a> {
     }
 
     fn equality(&mut self) -> ParseResult<Expr> {
-        while self.contains(vec![TokenType::BangEqual, TokenType::EqualEqual]) {
-            let operator = self.previous();
-            let right = match self.comparison() {
-                Ok(result) => result,
-                Err(err) => return Err(err),
-            };
-            expr = &mut Expr::Binary {
-                left: Box::new(expr.clone()),
+        let mut expr = self.comparison()?;
+        while self.contains(&[TokenType::BangEqual, TokenType::EqualEqual]) {
+            let operator = self.previous().clone();
+            let right = self.comparison()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            }
+            };
         }
-        Ok(expr.clone())
+        Ok(expr)
     }
 
     fn comparison(&mut self) -> ParseResult<Expr> {
@@ -201,9 +199,9 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn contains(&mut self, types: Vec<TokenType>) -> bool {
+    fn contains(&mut self, types: &[TokenType]) -> bool {
         for token_type in types {
-            if self.check(token_type) {
+            if self.check(*token_type) {
                 self.advance();
                 return true;
             }

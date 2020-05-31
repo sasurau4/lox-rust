@@ -1,38 +1,38 @@
 use super::token;
 use super::token::Token;
 
-pub trait Visitor<'a, T> {
+pub trait Visitor<T> {
     fn visit_binary(self, left: Expr, operator: Token, right: Expr) -> T;
     fn visit_grouping(self, expr: Expr) -> T;
     fn visit_literal(self, expr: token::Literal) -> T;
     fn visit_unary(self, operator: Token, right: Expr) -> T;
 }
 
-pub trait Acceptor<'a, T> {
-    fn accept(self, visitor: impl Visitor<'a, T>) -> T;
+pub trait Acceptor<T> {
+    fn accept(self, visitor: impl Visitor<T>) -> T;
 }
 
 #[derive(Debug, Clone)]
-pub enum Expr<'a> {
+pub enum Expr {
     Binary {
-        left: Box<Expr<'a>>,
-        operator: Token<'a>,
-        right: Box<Expr<'a>>,
+        left: Box<Expr>,
+        operator: Token,
+        right: Box<Expr>,
     },
     Unary {
-        operator: Token<'a>,
-        right: Box<Expr<'a>>,
+        operator: Token,
+        right: Box<Expr>,
     },
     Grouping {
-        expression: Box<Expr<'a>>,
+        expression: Box<Expr>,
     },
     Literal {
-        value: token::Literal<'a>,
+        value: token::Literal,
     },
 }
 
-impl<'a, T> Acceptor<'a, T> for Expr<'a> {
-    fn accept(self, visitor: impl Visitor<'a, T>) -> T {
+impl<T> Acceptor<T> for Expr {
+    fn accept(self, visitor: impl Visitor<T>) -> T {
         match self {
             Expr::Binary {
                 left,

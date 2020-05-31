@@ -2,9 +2,9 @@ use super::token_type::TokenType;
 // use std::fmt;
 
 #[derive(Debug, Clone, Copy)]
-pub enum Literal<'a> {
+pub enum Literal {
     Usize(usize),
-    String(&'a str),
+    String(String),
     Float(f64),
     Bool(bool),
     None,
@@ -16,21 +16,16 @@ pub enum Literal<'a> {
 //     }
 // }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Token<'a> {
+#[derive(Debug, Clone)]
+pub struct Token {
     pub token_type: TokenType,
-    pub lexeme: &'a str,
-    pub literal: Literal<'a>,
+    pub lexeme: String,
+    pub literal: Literal,
     pub line: usize,
 }
 
-impl<'a> Token<'a> {
-    pub fn new(
-        token_type: TokenType,
-        lexeme: &'a str,
-        literal: Literal<'a>,
-        line: usize,
-    ) -> Token<'a> {
+impl Token {
+    pub fn new(token_type: TokenType, lexeme: String, literal: Literal, line: usize) -> Token {
         Token {
             token_type,
             lexeme,
