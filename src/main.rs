@@ -1,16 +1,16 @@
 use ast_printer::AstPrinter;
 use clap::{App, Arg};
-use expr::Expr;
+use interpreter::Interpreter;
 use log::info;
 use parser::Parser;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
-use token::Token;
 
 mod ast_printer;
 mod error;
 mod expr;
+mod interpreter;
 mod lexer;
 mod parser;
 mod token;
@@ -126,5 +126,7 @@ fn run(source: &str) {
         _ => return,
     };
     let ast_printer = AstPrinter {};
-    println!("result: {}", ast_printer.print(expression));
+    println!("AST result: {}", ast_printer.print(expression.clone()));
+    let interpreter = Interpreter {};
+    println!("Evaluated result: {:?}", interpreter.interpret(expression));
 }

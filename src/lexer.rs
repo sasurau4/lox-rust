@@ -208,11 +208,11 @@ impl Lexer {
         }
 
         let target_literal = self.source.get(self.start..self.current).unwrap();
-        let parsed_usize = target_literal.parse::<usize>();
+        let parsed_usize = target_literal.parse::<isize>();
         let parsed_float = target_literal.parse::<f64>();
 
         let literal = if parsed_usize.is_ok() {
-            Literal::Usize(parsed_usize.ok().unwrap())
+            Literal::Isize(parsed_usize.ok().unwrap())
         } else if parsed_float.is_ok() {
             Literal::Float(parsed_float.ok().unwrap())
         } else {

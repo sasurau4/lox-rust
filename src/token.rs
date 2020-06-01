@@ -3,7 +3,7 @@ use super::token_type::TokenType;
 
 #[derive(Debug, Clone)]
 pub enum Literal {
-    Usize(usize),
+    Isize(isize),
     String(String),
     Float(f64),
     Bool(bool),

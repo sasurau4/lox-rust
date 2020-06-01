@@ -37,7 +37,7 @@ impl Visitor<String> for AstPrinter {
     fn visit_literal(self, expr: Literal) -> String {
         match expr {
             Literal::None => String::from("nil"),
-            Literal::Usize(u) => u.to_string(),
+            Literal::Isize(u) => u.to_string(),
             Literal::Float(f) => f.to_string(),
             Literal::String(s) => String::from(s),
             Literal::Bool(b) => b.to_string(),
