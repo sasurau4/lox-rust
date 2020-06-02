@@ -1,5 +1,8 @@
 use super::error::{Error, Result};
-use super::expr::{Acceptor, Expr, Visitor};
+use super::expr;
+use super::expr::{Acceptor as ExprAcceptor, Expr};
+use super::stmt;
+use super::stmt::{Acceptor as StmtAcceptor, Stmt};
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
 
@@ -7,11 +10,19 @@ use super::token_type::TokenType;
 pub struct Interpreter {}
 
 impl Interpreter {
-    pub fn interpret(self, expr: Expr) -> Result<Literal> {
-        self.evaluate(expr)
+    pub fn interpret(self, statements: Vec<Stmt>) -> Result<()> {
+        for statement in statements {
+            self.execute(statement)?
+        }
+        Ok(())
     }
+
     fn evaluate(self, expr: Expr) -> Result<Literal> {
         expr.accept(self)
+    }
+
+    fn execute(self, stmt: Stmt) -> Result<()> {
+        stmt.accept(self)
     }
 
     fn is_truthy(self, literal: Literal) -> bool {
@@ -34,7 +45,7 @@ impl Interpreter {
     }
 }
 
-impl Visitor<Result<Literal>> for Interpreter {
+impl expr::Visitor<Result<Literal>> for Interpreter {
     fn visit_grouping(self, expr: Expr) -> Result<Literal> {
         match expr {
             Expr::Grouping { expression } => self.evaluate(*expression),
@@ -154,5 +165,23 @@ impl Visitor<Result<Literal>> for Interpreter {
 
     fn visit_literal(self, expr: Literal) -> Result<Literal> {
         Ok(expr)
+    }
+}
+
+impl stmt::Visitor<Result<()>> for Interpreter {
+    fn visit_expression_stmt(self, stmt: Stmt) -> Result<()> {
+        match stmt {
+            Stmt::Expression { expression } => self.evaluate(expression),
+            _ => unreachable!(),
+        };
+        Ok(())
+    }
+    fn visit_print_stmt(self, stmt: Stmt) -> Result<()> {
+        let value = match stmt {
+            Stmt::Print { expression } => self.evaluate(expression),
+            _ => unreachable!(),
+        };
+        println!("{}", value?);
+        Ok(())
     }
 }

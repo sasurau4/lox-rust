@@ -1,11 +1,14 @@
 use ast_printer::AstPrinter;
 use clap::{App, Arg};
+use error::{Error, Result};
 use interpreter::Interpreter;
-use log::info;
+use log::{debug, info};
 use parser::Parser;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
+use std::process::exit;
+use stmt::Stmt;
 
 mod ast_printer;
 mod error;
@@ -13,6 +16,7 @@ mod expr;
 mod interpreter;
 mod lexer;
 mod parser;
+mod stmt;
 mod token;
 mod token_type;
 
@@ -45,40 +49,8 @@ fn main() -> io::Result<()> {
     env_logger::builder().filter_level(log_level).init();
     info!("log_level: {}", log_level);
 
-    // let minus_token = Token {
-    //     token_type: TokenType::Minus,
-    //     lexeme: "-",
-    //     literal: token::Literal::None,
-    //     line: 1,
-    // };
-    // let one_two_three = Expr::Literal {
-    //     value: token::Literal::Usize(123),
-    // };
-    // let star_token = Token {
-    //     token_type: TokenType::Star,
-    //     lexeme: "*",
-    //     literal: token::Literal::None,
-    //     line: 1,
-    // };
-    // let four_five_point = Expr::Grouping {
-    //     expression: Box::new(Expr::Literal {
-    //         value: token::Literal::Float(45.67),
-    //     }),
-    // };
-
-    // let unary = Expr::Unary {
-    //     operator: minus_token,
-    //     right: Box::new(one_two_three),
-    // };
-
-    // let expression = Expr::Binary {
-    //     left: Box::new(unary),
-    //     operator: star_token,
-    //     right: Box::new(four_five_point),
-    // };
-
     if let Some(ref in_file) = matches.value_of("input") {
-        println!("work for {}", in_file);
+        debug!("run for {}", in_file);
         run_file(in_file)?
     } else {
         run_prompt()?
@@ -91,12 +63,15 @@ fn run_file(path: &str) -> io::Result<()> {
     let f = File::open(path)?;
     let f = BufReader::new(f);
     let mut source = String::from("");
+    let interpreter = Interpreter {};
+
     for line in f.lines() {
-        print!(">");
         source.push_str(&line.unwrap());
         source.push_str("\n")
     }
-    run(&source);
+    if let Err(_) = run(&source, interpreter) {
+        exit(70);
+    };
 
     Ok(())
 }
@@ -106,10 +81,12 @@ fn run_prompt() -> io::Result<()> {
     let mut stdout = io::stdout();
     print!("> ");
     stdout.flush().unwrap();
+    let interpreter = Interpreter {};
     let mut source = String::from("");
+
     for line in stdin.lock().lines() {
         source.push_str(&line.unwrap());
-        run(&source);
+        if let Err(_) = run(&source, interpreter) {};
         source = String::from("");
         print!("> ");
         stdout.flush().unwrap();
@@ -117,16 +94,17 @@ fn run_prompt() -> io::Result<()> {
     Ok(())
 }
 
-fn run(source: &str) {
+fn run(source: &str, interpreter: Interpreter) -> Result<()> {
     let mut lexer = lexer::Lexer::new(String::from(source));
     let tokens = lexer.tokenize_all();
     let mut parser = Parser::new(tokens);
-    let expression = match parser.parse() {
+    let statements = match parser.parse() {
         Ok(result) => result,
-        _ => return,
+        _ => return Err(Error::ParseError(String::from("parse error"))),
     };
-    let ast_printer = AstPrinter {};
-    println!("AST result: {}", ast_printer.print(expression.clone()));
-    let interpreter = Interpreter {};
-    println!("Evaluated result: {:?}", interpreter.interpret(expression));
+    // let ast_printer = AstPrinter {};
+    // println!("AST result: {}", ast_printer.print(statements.clone()));
+    let result = interpreter.interpret(statements);
+    // println!("Evaluated result: {:?}", result);
+    result
 }

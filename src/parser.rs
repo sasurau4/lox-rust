@@ -1,5 +1,6 @@
 use super::error::parser_error;
 use super::expr::Expr;
+use super::stmt::Stmt;
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
 
@@ -19,12 +20,36 @@ impl Parser {
         Parser { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> ParseResult<Expr> {
-        self.expression()
+    pub fn parse(&mut self) -> ParseResult<Vec<Stmt>> {
+        let mut statements = vec![];
+        while !self.is_at_end() {
+            statements.push(self.statement()?);
+        }
+        Ok(statements)
     }
 
     fn expression(&mut self) -> ParseResult<Expr> {
         self.equality()
+    }
+
+    fn statement(&mut self) -> ParseResult<Stmt> {
+        if self.contains(&[TokenType::Print]) {
+            return self.print_statement();
+        }
+
+        self.expression_statement()
+    }
+
+    fn print_statement(&mut self) -> ParseResult<Stmt> {
+        let value = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ':' after value.");
+        Ok(Stmt::Print { expression: value })
+    }
+
+    fn expression_statement(&mut self) -> ParseResult<Stmt> {
+        let expr = self.expression()?;
+        self.consume(TokenType::Semicolon, "Expect ':' after value.");
+        Ok(Stmt::Expression { expression: expr })
     }
 
     fn equality(&mut self) -> ParseResult<Expr> {

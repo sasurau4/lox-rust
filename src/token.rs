@@ -1,5 +1,5 @@
 use super::token_type::TokenType;
-// use std::fmt;
+use std::fmt;
 
 #[derive(Debug, Clone)]
 pub enum Literal {
@@ -10,11 +10,17 @@ pub enum Literal {
     None,
 }
 
-// impl<'a> fmt::Display for Literal<'a> {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         write!(f, "{}", "p")
-//     }
-// }
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Literal::Isize(i) => write!(f, "{}", i),
+            Literal::String(string) => write!(f, "{}", string),
+            Literal::Float(float) => write!(f, "{}", float),
+            Literal::Bool(boolean) => write!(f, "{}", boolean),
+            Literal::None => write!(f, "{}", &"nil"),
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Token {
