@@ -2,6 +2,14 @@ use super::token::Token;
 use super::token_type::TokenType;
 use log::error;
 
+#[derive(Debug, Clone)]
+pub enum Error {
+    ParseError(String),
+    RuntimeError(Token, String),
+}
+
+pub type Result<T> = std::result::Result<T, Error>;
+
 fn report(line: usize, place: &str, message: &str) {
     error!("[line {}] Error {}: {}", line, place, message);
 }
