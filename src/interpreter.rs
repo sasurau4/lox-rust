@@ -200,28 +200,23 @@ impl expr::Visitor<Result<Object>> for Interpreter {
     fn visit_literal(&mut self, expr: &Literal) -> Result<Object> {
         Ok(Object::Literal(expr.clone()))
     }
+
+    fn visit_assign(&mut self, name: &Token, value: &Expr) -> Result<Object> {
+        let value = self.evaluate(value)?;
+        self.environment.assign(name, &value)?;
+        Ok(value)
+    }
 }
 
 impl stmt::Visitor<Result<()>> for Interpreter {
-    fn visit_expression_stmt(&mut self, stmt: &Stmt) -> Result<()> {
-        match stmt {
-            Stmt::Expression { expression } => self.evaluate(expression)?,
-            _ => unreachable!(),
-        };
+    fn visit_expression_stmt(&mut self, expression: &Expr) -> Result<()> {
+        self.evaluate(expression)?;
         Ok(())
     }
-    fn visit_print_stmt(&mut self, stmt: &Stmt) -> Result<()> {
-        let value = match stmt {
-            Stmt::Print { expression } => self.evaluate(expression),
-            _ => unreachable!(),
-        };
-        match value {
-            Ok(r) => {
-                println!("{}", r);
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
+    fn visit_print_stmt(&mut self, expression: &Expr) -> Result<()> {
+        let value = self.evaluate(expression)?;
+        println!("{}", value);
+        Ok(())
     }
     fn visit_var_stmt(&mut self, name: &Token, initializer: &Expr) -> Result<()> {
         let value = self.evaluate(initializer)?;

@@ -26,8 +26,21 @@ impl Environment {
             Some(r) => Ok(r.clone()),
             None => Err(Error::RuntimeError(
                 name.clone(),
-                String::from(format!("Undefined variableble '{}'.", &name.lexeme)),
+                format!("Undefined variableble '{}'.", &name.lexeme),
             )),
         }
+    }
+
+    pub fn assign(&self, name: &Token, value: &Object) -> Result<()> {
+        if self.values.borrow().contains_key(&name.lexeme) {
+            self.values
+                .borrow_mut()
+                .insert(name.lexeme.clone(), value.clone());
+            return Ok(());
+        }
+        Err(Error::RuntimeError(
+            name.clone(),
+            format!("Undefined variable '{}'", &name.lexeme),
+        ))
     }
 }

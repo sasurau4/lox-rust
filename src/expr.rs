@@ -7,6 +7,7 @@ pub trait Visitor<T> {
     fn visit_literal(&mut self, expr: &token::Literal) -> T;
     fn visit_unary(&mut self, operator: &Token, right: &Expr) -> T;
     fn visit_variable(&mut self, name: &Token) -> T;
+    fn visit_assign(&mut self, name: &Token, value: &Expr) -> T;
 }
 
 pub trait Acceptor<T> {
@@ -33,6 +34,10 @@ pub enum Expr {
     Variable {
         name: Token,
     },
+    Assign {
+        name: Token,
+        value: Box<Expr>,
+    },
 }
 
 impl<T> Acceptor<T> for Expr {
@@ -42,11 +47,12 @@ impl<T> Acceptor<T> for Expr {
                 left,
                 operator,
                 right,
-            } => visitor.visit_binary(&*left, operator, &*right),
-            Expr::Unary { operator, right } => visitor.visit_unary(operator, &*right),
+            } => visitor.visit_binary(left, operator, right),
+            Expr::Unary { operator, right } => visitor.visit_unary(operator, right),
             Expr::Grouping { expression } => visitor.visit_grouping(expression),
             Expr::Literal { value } => visitor.visit_literal(value),
             Expr::Variable { name } => visitor.visit_variable(name),
+            Expr::Assign { name, value } => visitor.visit_assign(name, value),
         }
     }
 }

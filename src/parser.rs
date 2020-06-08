@@ -29,7 +29,7 @@ impl Parser {
     }
 
     fn expression(&mut self) -> ParseResult<Expr> {
-        self.equality()
+        self.assignment()
     }
 
     fn declaration(&mut self) -> ParseResult<Stmt> {
@@ -65,12 +65,13 @@ impl Parser {
     fn var_declaration(&mut self) -> ParseResult<Stmt> {
         let name = self.consume(TokenType::Identifier, "Expect variable name.")?;
 
-        let mut initializer = Expr::Literal {
-            value: Literal::None,
+        let initializer = if self.contains(&[TokenType::Equal]) {
+            self.expression()?
+        } else {
+            Expr::Literal {
+                value: Literal::None,
+            }
         };
-        if self.contains(&[TokenType::Equal]) {
-            initializer = self.expression()?;
-        }
 
         self.consume(
             TokenType::Semicolon,
@@ -83,6 +84,24 @@ impl Parser {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ':' after value.")?;
         Ok(Stmt::Expression { expression: expr })
+    }
+
+    fn assignment(&mut self) -> ParseResult<Expr> {
+        let expr = self.equality()?;
+
+        if self.contains(&[TokenType::Equal]) {
+            let equals = self.previous().clone();
+            let value = self.assignment()?;
+
+            return match expr {
+                Expr::Variable { name } => Ok(Expr::Assign {
+                    name,
+                    value: Box::new(value),
+                }),
+                _ => Err(Parser::error(equals, "Invalid assignment target.")),
+            };
+        }
+        Ok(expr)
     }
 
     fn equality(&mut self) -> ParseResult<Expr> {
