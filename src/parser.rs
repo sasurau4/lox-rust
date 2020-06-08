@@ -58,7 +58,7 @@ impl Parser {
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
         let value = self.expression()?;
-        self.consume(TokenType::Semicolon, "Expect ':' after value.");
+        self.consume(TokenType::Semicolon, "Expect ':' after value.")?;
         Ok(Stmt::Print { expression: value })
     }
 

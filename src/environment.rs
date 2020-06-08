@@ -1,12 +1,12 @@
 use super::error::{Error, Result};
-use super::expr::Expr;
+use super::object::Object;
 use super::token::Token;
 use std::cell::RefCell;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    values: RefCell<HashMap<String, Expr>>,
+    values: RefCell<HashMap<String, Object>>,
 }
 
 impl Environment {
@@ -17,11 +17,11 @@ impl Environment {
         }
     }
 
-    pub fn define(&self, name: String, value: &Expr) {
+    pub fn define(&self, name: String, value: &Object) {
         self.values.borrow_mut().insert(name, value.clone());
     }
 
-    pub fn get(&self, name: &Token) -> Result<Expr> {
+    pub fn get(&self, name: &Token) -> Result<Object> {
         match self.values.borrow_mut().get(&name.lexeme) {
             Some(r) => Ok(r.clone()),
             None => Err(Error::RuntimeError(

@@ -15,6 +15,7 @@ mod error;
 mod expr;
 mod interpreter;
 mod lexer;
+mod object;
 mod parser;
 mod stmt;
 mod token;
