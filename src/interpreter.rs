@@ -17,13 +17,13 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Interpreter {
         Interpreter {
-            environment: Rc::new(Environment::new()),
+            environment: Rc::new(Environment::new(None)),
         }
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<()> {
-        for mut statement in statements {
-            match self.execute(&mut statement) {
+        for statement in statements {
+            match self.execute(&statement) {
                 Ok(_) => {}
                 Err(r) => println!("{:?}", r),
             }
@@ -35,7 +35,7 @@ impl Interpreter {
         expr.accept(self)
     }
 
-    fn execute(&mut self, stmt: &mut Stmt) -> Result<()> {
+    fn execute(&mut self, stmt: &Stmt) -> Result<()> {
         stmt.accept(self)
     }
 
@@ -58,6 +58,22 @@ impl Interpreter {
                 _ => false,
             },
         }
+    }
+
+    fn execute_block(&mut self, statements: &[Stmt], environment: Environment) -> Result<()> {
+        let previous = self.environment.clone();
+        self.environment = Rc::new(environment);
+        for statement in statements {
+            match self.execute(statement) {
+                Ok(_) => {}
+                Err(e) => {
+                    self.environment = previous;
+                    return Err(e);
+                }
+            };
+        }
+        self.environment = previous;
+        Ok(())
     }
 }
 
@@ -90,7 +106,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
     }
 
     fn visit_binary(&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<Object> {
-        use super::token::Literal::{Bool, Float, Isize, None};
+        use super::token::Literal::{Bool, Float, Isize, None, String as LString};
         let left = self.evaluate(left)?;
         let right = self.evaluate(right)?;
 
@@ -161,6 +177,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                     (Isize(l), Float(r)) => Ok(Object::Literal(Float((l as f64) + r))),
                     (Float(l), Isize(r)) => Ok(Object::Literal(Float(l + r as f64))),
                     (Float(l), Float(r)) => Ok(Object::Literal(Float(l + r))),
+                    (LString(l), LString(r)) => Ok(Object::Literal(LString(format!("{}{}", l, r)))),
                     _ => Err(Error::RuntimeError(
                         operator.clone(),
                         String::from("Operands must be numbers."),
@@ -221,6 +238,13 @@ impl stmt::Visitor<Result<()>> for Interpreter {
     fn visit_var_stmt(&mut self, name: &Token, initializer: &Expr) -> Result<()> {
         let value = self.evaluate(initializer)?;
         self.environment.define(name.lexeme.clone(), &value);
+        Ok(())
+    }
+    fn visit_block_stmt(&mut self, statements: &[Stmt]) -> Result<()> {
+        self.execute_block(
+            statements,
+            Environment::new(Some(Rc::clone(&self.environment))),
+        )?;
         Ok(())
     }
 }
