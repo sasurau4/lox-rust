@@ -23,13 +23,29 @@ impl Parser {
     pub fn parse(&mut self) -> ParseResult<Vec<Stmt>> {
         let mut statements = vec![];
         while !self.is_at_end() {
-            statements.push(self.statement()?);
+            statements.push(self.declaration()?);
         }
         Ok(statements)
     }
 
     fn expression(&mut self) -> ParseResult<Expr> {
         self.equality()
+    }
+
+    fn declaration(&mut self) -> ParseResult<Stmt> {
+        let result = if self.contains(&[TokenType::Var]) {
+            self.var_declaration()
+        } else {
+            self.statement()
+        };
+
+        match result {
+            Ok(r) => Ok(r),
+            Err(e) => {
+                self.synchronize();
+                Err(e)
+            }
+        }
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
@@ -46,9 +62,26 @@ impl Parser {
         Ok(Stmt::Print { expression: value })
     }
 
+    fn var_declaration(&mut self) -> ParseResult<Stmt> {
+        let name = self.consume(TokenType::Identifier, "Expect variable name.")?;
+
+        let mut initializer = Expr::Literal {
+            value: Literal::None,
+        };
+        if self.contains(&[TokenType::Equal]) {
+            initializer = self.expression()?;
+        }
+
+        self.consume(
+            TokenType::Semicolon,
+            "Expect ';' after variable declaration.",
+        )?;
+        Ok(Stmt::Var { name, initializer })
+    }
+
     fn expression_statement(&mut self) -> ParseResult<Stmt> {
         let expr = self.expression()?;
-        self.consume(TokenType::Semicolon, "Expect ':' after value.");
+        self.consume(TokenType::Semicolon, "Expect ':' after value.")?;
         Ok(Stmt::Expression { expression: expr })
     }
 
@@ -168,6 +201,11 @@ impl Parser {
         if self.contains(&[TokenType::Number, TokenType::String]) {
             return Ok(Expr::Literal {
                 value: self.previous().literal.clone(),
+            });
+        }
+        if self.contains(&[TokenType::Identifier]) {
+            return Ok(Expr::Variable {
+                name: self.previous().clone(),
             });
         }
 

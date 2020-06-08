@@ -46,4 +46,7 @@ impl Visitor<String> for AstPrinter {
     fn visit_unary(self, operator: Token, right: Expr) -> String {
         self.parenthesize(operator.lexeme, vec![right])
     }
+    fn visit_variable(self, name: Token) -> String {
+        String::from("token dayo")
+    }
 }

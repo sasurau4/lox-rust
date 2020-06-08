@@ -1,3 +1,4 @@
+use super::environment::Environment;
 use super::error::{Error, Result};
 use super::expr;
 use super::expr::{Acceptor as ExprAcceptor, Expr};
@@ -5,27 +6,39 @@ use super::stmt;
 use super::stmt::{Acceptor as StmtAcceptor, Stmt};
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
+use std::rc::Rc;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Interpreter {}
+#[derive(Debug, Clone)]
+pub struct Interpreter {
+    environment: Rc<Environment>,
+}
 
 impl Interpreter {
-    pub fn interpret(self, statements: Vec<Stmt>) -> Result<()> {
-        for statement in statements {
-            self.execute(statement)?
+    pub fn new() -> Interpreter {
+        Interpreter {
+            environment: Rc::new(Environment::new()),
+        }
+    }
+
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<()> {
+        for mut statement in statements {
+            match self.execute(&mut statement) {
+                Ok(_) => {}
+                Err(r) => println!("{:?}", r),
+            }
         }
         Ok(())
     }
 
-    fn evaluate(self, expr: Expr) -> Result<Literal> {
+    fn evaluate(&mut self, expr: &Expr) -> Result<Literal> {
         expr.accept(self)
     }
 
-    fn execute(self, stmt: Stmt) -> Result<()> {
+    fn execute(&mut self, stmt: &mut Stmt) -> Result<()> {
         stmt.accept(self)
     }
 
-    fn is_truthy(self, literal: Literal) -> bool {
+    fn is_truthy(&mut self, literal: Literal) -> bool {
         match literal {
             Literal::None => false,
             Literal::Bool(b) => b,
@@ -33,7 +46,7 @@ impl Interpreter {
         }
     }
 
-    fn is_equal(self, a: Literal, b: Literal) -> bool {
+    fn is_equal(&self, a: Literal, b: Literal) -> bool {
         match (a, b) {
             (Literal::None, Literal::None) => true,
             (Literal::Bool(a), Literal::Bool(b)) => a == b,
@@ -46,21 +59,22 @@ impl Interpreter {
 }
 
 impl expr::Visitor<Result<Literal>> for Interpreter {
-    fn visit_grouping(self, expr: Expr) -> Result<Literal> {
-        match expr {
-            Expr::Grouping { expression } => self.evaluate(*expression),
-            _ => unreachable!(),
-        }
+    fn visit_grouping(&mut self, expr: &Expr) -> Result<Literal> {
+        self.evaluate(expr)
+        // match expr {
+        //     Expr::Grouping { mut expression } => self.evaluate(&mut *expression),
+        //     _ => unreachable!(),
+        // }
     }
 
-    fn visit_unary(self, operator: Token, right: Expr) -> Result<Literal> {
+    fn visit_unary(&mut self, operator: &Token, right: &Expr) -> Result<Literal> {
         let right = self.evaluate(right)?;
         match operator.token_type {
             TokenType::Minus => match right {
                 Literal::Isize(r) => Ok(Literal::Isize(-r)),
                 Literal::Float(r) => Ok(Literal::Float(-r)),
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operand must be a number."),
                 )),
             },
@@ -69,7 +83,16 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
         }
     }
 
-    fn visit_binary(self, left: Expr, operator: Token, right: Expr) -> Result<Literal> {
+    fn visit_variable(&mut self, name: &Token) -> Result<Literal> {
+        let env = self.environment.get(name)?;
+
+        match env {
+            Expr::Literal { value } => Ok(value),
+            _ => unreachable!(),
+        }
+    }
+
+    fn visit_binary(&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<Literal> {
         let left = self.evaluate(left)?;
         let right = self.evaluate(right)?;
 
@@ -80,7 +103,7 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
                 (Literal::Float(l), Literal::Isize(r)) => Ok(Literal::Bool(l > r as f64)),
                 (Literal::Float(l), Literal::Float(r)) => Ok(Literal::Bool(l > r)),
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operands must be numbers."),
                 )),
             },
@@ -90,7 +113,7 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
                 (Literal::Float(l), Literal::Isize(r)) => Ok(Literal::Bool(l >= r as f64)),
                 (Literal::Float(l), Literal::Float(r)) => Ok(Literal::Bool(l >= r)),
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operands must be numbers."),
                 )),
             },
@@ -100,7 +123,7 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
                 (Literal::Float(l), Literal::Isize(r)) => Ok(Literal::Bool(l < r as f64)),
                 (Literal::Float(l), Literal::Float(r)) => Ok(Literal::Bool(l < r)),
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operands must be numbers."),
                 )),
             },
@@ -110,7 +133,7 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
                 (Literal::Float(l), Literal::Isize(r)) => Ok(Literal::Bool(l <= r as f64)),
                 (Literal::Float(l), Literal::Float(r)) => Ok(Literal::Bool(l <= r)),
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operands must be numbers."),
                 )),
             },
@@ -120,7 +143,7 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
                 (Literal::Float(l), Literal::Isize(r)) => Ok(Literal::Float(l - r as f64)),
                 (Literal::Float(l), Literal::Float(r)) => Ok(Literal::Float(l - r)),
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operands must be numbers."),
                 )),
             },
@@ -133,7 +156,7 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
                     Ok(Literal::String(format!("{}{}", l, r)))
                 }
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operands must be two numbers or two strings."),
                 )),
             },
@@ -143,7 +166,7 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
                 (Literal::Float(l), Literal::Isize(r)) => Ok(Literal::Float(l / r as f64)),
                 (Literal::Float(l), Literal::Float(r)) => Ok(Literal::Float(l / r)),
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operands must be numbers."),
                 )),
             },
@@ -153,7 +176,7 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
                 (Literal::Float(l), Literal::Isize(r)) => Ok(Literal::Float(l * r as f64)),
                 (Literal::Float(l), Literal::Float(r)) => Ok(Literal::Float(l * r)),
                 _ => Err(Error::RuntimeError(
-                    operator,
+                    operator.clone(),
                     String::from("Operands must be numbers."),
                 )),
             },
@@ -163,25 +186,36 @@ impl expr::Visitor<Result<Literal>> for Interpreter {
         }
     }
 
-    fn visit_literal(self, expr: Literal) -> Result<Literal> {
-        Ok(expr)
+    fn visit_literal(&mut self, expr: &Literal) -> Result<Literal> {
+        Ok(expr.clone())
     }
 }
 
 impl stmt::Visitor<Result<()>> for Interpreter {
-    fn visit_expression_stmt(self, stmt: Stmt) -> Result<()> {
+    fn visit_expression_stmt(&mut self, stmt: &Stmt) -> Result<()> {
         match stmt {
             Stmt::Expression { expression } => self.evaluate(expression),
             _ => unreachable!(),
         };
         Ok(())
     }
-    fn visit_print_stmt(self, stmt: Stmt) -> Result<()> {
+    fn visit_print_stmt(&mut self, stmt: &Stmt) -> Result<()> {
         let value = match stmt {
             Stmt::Print { expression } => self.evaluate(expression),
             _ => unreachable!(),
         };
-        println!("{}", value?);
+        match value {
+            Ok(r) => {
+                println!("{}", r);
+                Ok(())
+            }
+            Err(e) => Err(e),
+        }
+    }
+    fn visit_var_stmt(&mut self, name: &Token, initializer: &Expr) -> Result<()> {
+        let value = self.evaluate(initializer)?;
+        self.environment
+            .define(name.lexeme.clone(), &Expr::Literal { value });
         Ok(())
     }
 }

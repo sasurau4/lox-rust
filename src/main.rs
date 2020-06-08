@@ -1,4 +1,4 @@
-use ast_printer::AstPrinter;
+// use ast_printer::AstPrinter;
 use clap::{App, Arg};
 use error::{Error, Result};
 use interpreter::Interpreter;
@@ -8,9 +8,9 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
 use std::process::exit;
-use stmt::Stmt;
 
-mod ast_printer;
+// mod ast_printer;
+mod environment;
 mod error;
 mod expr;
 mod interpreter;
@@ -63,13 +63,13 @@ fn run_file(path: &str) -> io::Result<()> {
     let f = File::open(path)?;
     let f = BufReader::new(f);
     let mut source = String::from("");
-    let interpreter = Interpreter {};
+    let mut interpreter = Interpreter::new();
 
     for line in f.lines() {
         source.push_str(&line.unwrap());
         source.push_str("\n")
     }
-    if let Err(_) = run(&source, interpreter) {
+    if let Err(_) = run(&source, &mut interpreter) {
         exit(70);
     };
 
@@ -81,12 +81,12 @@ fn run_prompt() -> io::Result<()> {
     let mut stdout = io::stdout();
     print!("> ");
     stdout.flush().unwrap();
-    let interpreter = Interpreter {};
+    let mut interpreter = Interpreter::new();
     let mut source = String::from("");
 
     for line in stdin.lock().lines() {
         source.push_str(&line.unwrap());
-        if let Err(_) = run(&source, interpreter) {};
+        if let Err(_) = run(&source, &mut interpreter) {};
         source = String::from("");
         print!("> ");
         stdout.flush().unwrap();
@@ -94,7 +94,7 @@ fn run_prompt() -> io::Result<()> {
     Ok(())
 }
 
-fn run(source: &str, interpreter: Interpreter) -> Result<()> {
+fn run(source: &str, interpreter: &mut Interpreter) -> Result<()> {
     let mut lexer = lexer::Lexer::new(String::from(source));
     let tokens = lexer.tokenize_all();
     let mut parser = Parser::new(tokens);
