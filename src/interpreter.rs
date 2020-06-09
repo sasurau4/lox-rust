@@ -7,6 +7,7 @@ use super::stmt;
 use super::stmt::{Acceptor as StmtAcceptor, Stmt};
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
+use log::error;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -15,9 +16,9 @@ pub struct Interpreter {
 }
 
 impl Interpreter {
-    pub fn new() -> Interpreter {
+    pub fn new(environment: Environment) -> Interpreter {
         Interpreter {
-            environment: Rc::new(Environment::new(None)),
+            environment: Rc::new(environment),
         }
     }
 
@@ -25,7 +26,7 @@ impl Interpreter {
         for statement in statements {
             match self.execute(&statement) {
                 Ok(_) => {}
-                Err(r) => println!("{:?}", r),
+                Err(r) => error!("{:?}", r),
             }
         }
         Ok(())
@@ -227,7 +228,10 @@ impl expr::Visitor<Result<Object>> for Interpreter {
 
 impl stmt::Visitor<Result<()>> for Interpreter {
     fn visit_expression_stmt(&mut self, expression: &Expr) -> Result<()> {
-        self.evaluate(expression)?;
+        let result = self.evaluate(expression)?;
+        if self.environment.is_repl {
+            println!("{}", result);
+        }
         Ok(())
     }
     fn visit_print_stmt(&mut self, expression: &Expr) -> Result<()> {
@@ -243,7 +247,7 @@ impl stmt::Visitor<Result<()>> for Interpreter {
     fn visit_block_stmt(&mut self, statements: &[Stmt]) -> Result<()> {
         self.execute_block(
             statements,
-            Environment::new(Some(Rc::clone(&self.environment))),
+            Environment::new(Some(Rc::clone(&self.environment)), self.environment.is_repl),
         )?;
         Ok(())
     }

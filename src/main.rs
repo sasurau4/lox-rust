@@ -1,5 +1,6 @@
 // use ast_printer::AstPrinter;
 use clap::{App, Arg};
+use environment::Environment;
 use error::{Error, Result};
 use interpreter::Interpreter;
 use log::{debug, info};
@@ -64,7 +65,9 @@ fn run_file(path: &str) -> io::Result<()> {
     let f = File::open(path)?;
     let f = BufReader::new(f);
     let mut source = String::from("");
-    let mut interpreter = Interpreter::new();
+    let env = Environment::new(None, false);
+
+    let mut interpreter = Interpreter::new(env);
 
     for line in f.lines() {
         source.push_str(&line.unwrap());
@@ -82,7 +85,8 @@ fn run_prompt() -> io::Result<()> {
     let mut stdout = io::stdout();
     print!("> ");
     stdout.flush().unwrap();
-    let mut interpreter = Interpreter::new();
+    let env = Environment::new(None, true);
+    let mut interpreter = Interpreter::new(env);
     let mut source = String::from("");
 
     for line in stdin.lock().lines() {

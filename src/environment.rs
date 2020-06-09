@@ -9,14 +9,16 @@ use std::rc::Rc;
 pub struct Environment {
     enclosing: Option<Rc<Environment>>,
     values: RefCell<HashMap<String, Object>>,
+    pub is_repl: bool,
 }
 
 impl Environment {
-    pub fn new(enclosing: Option<Rc<Environment>>) -> Environment {
+    pub fn new(enclosing: Option<Rc<Environment>>, is_repl: bool) -> Environment {
         let values = HashMap::new();
         Environment {
             enclosing,
             values: RefCell::new(values),
+            is_repl,
         }
     }
 
