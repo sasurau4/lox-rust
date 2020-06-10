@@ -40,11 +40,13 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    fn is_truthy(&mut self, literal: Literal) -> bool {
-        match literal {
-            Literal::None => false,
-            Literal::Bool(b) => b,
-            _ => true,
+    fn is_truthy(&mut self, object: Object) -> bool {
+        match object {
+            Object::Literal(literal) => match literal {
+                Literal::None => false,
+                Literal::Bool(b) => b,
+                _ => true,
+            },
         }
     }
 
@@ -97,7 +99,9 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                     String::from("Operand must be a number."),
                 )),
             },
-            (Bang, Object::Literal(lit)) => Ok(Object::Literal(Bool(!self.is_truthy(lit)))),
+            (Bang, Object::Literal(lit)) => {
+                Ok(Object::Literal(Bool(!self.is_truthy(Object::Literal(lit)))))
+            }
             _ => Ok(Object::Literal(None)),
         }
     }
@@ -219,6 +223,20 @@ impl expr::Visitor<Result<Object>> for Interpreter {
         Ok(Object::Literal(expr.clone()))
     }
 
+    fn visit_logical(&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<Object> {
+        let evaluated_left = self.evaluate(left);
+        let is_left_truthy = self.is_truthy(evaluated_left.clone()?);
+
+        if operator.token_type == TokenType::Or {
+            if is_left_truthy {
+                return evaluated_left;
+            }
+        } else if !is_left_truthy {
+            return evaluated_left;
+        }
+        self.evaluate(right)
+    }
+
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> Result<Object> {
         let value = self.evaluate(value)?;
         self.environment.assign(name, &value)?;
@@ -231,6 +249,22 @@ impl stmt::Visitor<Result<()>> for Interpreter {
         let result = self.evaluate(expression)?;
         if self.environment.is_repl {
             println!("{}", result);
+        }
+        Ok(())
+    }
+    fn visit_if_stmt(
+        &mut self,
+        condition: &Expr,
+        then_branch: &Stmt,
+        else_branch: &Option<Box<Stmt>>,
+    ) -> Result<()> {
+        let evaluated = self.evaluate(condition)?;
+        if self.is_truthy(evaluated) {
+            self.execute(then_branch)?
+        }
+        match else_branch {
+            Some(eb) => self.execute(&*eb)?,
+            None => {}
         }
         Ok(())
     }
@@ -249,6 +283,13 @@ impl stmt::Visitor<Result<()>> for Interpreter {
             statements,
             Environment::new(Some(Rc::clone(&self.environment)), self.environment.is_repl),
         )?;
+        Ok(())
+    }
+    fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<()> {
+        let evaluated_condition = self.evaluate(condition)?;
+        while self.is_truthy(evaluated_condition.clone()) {
+            self.execute(body)?;
+        }
         Ok(())
     }
 }

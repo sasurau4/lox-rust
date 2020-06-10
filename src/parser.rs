@@ -49,8 +49,14 @@ impl Parser {
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
+        if self.contains(&[TokenType::If]) {
+            return self.if_statement();
+        }
         if self.contains(&[TokenType::Print]) {
             return self.print_statement();
+        }
+        if self.contains(&[TokenType::While]) {
+            return self.while_statement();
         }
         if self.contains(&[TokenType::LeftBrace]) {
             return Ok(Stmt::Block {
@@ -58,6 +64,24 @@ impl Parser {
             });
         }
         self.expression_statement()
+    }
+
+    fn if_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expect ')' after if condition.")?;
+
+        let then_branch = Box::new(self.statement()?);
+        let else_branch = if self.contains(&[TokenType::Else]) {
+            Some(Box::new(self.statement()?))
+        } else {
+            None
+        };
+        Ok(Stmt::If {
+            condition,
+            then_branch,
+            else_branch,
+        })
     }
 
     fn print_statement(&mut self) -> ParseResult<Stmt> {
@@ -84,6 +108,14 @@ impl Parser {
         Ok(Stmt::Var { name, initializer })
     }
 
+    fn while_statement(&mut self) -> ParseResult<Stmt> {
+        self.consume(TokenType::LeftParen, "Expectct '(' after 'while'.");
+        let condition = self.expression()?;
+        self.consume(TokenType::RightParen, "Expectct ')' after condition.");
+        let body = Box::new(self.statement()?);
+        Ok(Stmt::While { condition, body })
+    }
+
     fn expression_statement(&mut self) -> ParseResult<Stmt> {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ':' after value.")?;
@@ -100,7 +132,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> ParseResult<Expr> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.contains(&[TokenType::Equal]) {
             let equals = self.previous().clone();
@@ -112,6 +144,34 @@ impl Parser {
                     value: Box::new(value),
                 }),
                 _ => Err(Parser::error(equals, "Invalid assignment target.")),
+            };
+        }
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.and()?;
+        while self.contains(&[TokenType::Or]) {
+            let operator = self.previous().clone();
+            let right = self.and()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            };
+        }
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.equality()?;
+        while self.contains(&[TokenType::And]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+            expr = Expr::Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
             };
         }
         Ok(expr)
