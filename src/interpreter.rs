@@ -40,7 +40,7 @@ impl Interpreter {
         stmt.accept(self)
     }
 
-    fn is_truthy(&mut self, object: Object) -> bool {
+    fn is_truthy(&self, object: Object) -> bool {
         match object {
             Object::Literal(literal) => match literal {
                 Literal::None => false,
@@ -286,9 +286,13 @@ impl stmt::Visitor<Result<()>> for Interpreter {
         Ok(())
     }
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<()> {
-        let evaluated_condition = self.evaluate(condition)?;
-        while self.is_truthy(evaluated_condition.clone()) {
-            self.execute(body)?;
+        loop {
+            let evaluated_condition = self.evaluate(condition)?;
+            if self.is_truthy(evaluated_condition) {
+                self.execute(body)?
+            } else {
+                break;
+            }
         }
         Ok(())
     }
