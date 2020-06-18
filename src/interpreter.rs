@@ -1,3 +1,4 @@
+use super::callable::{Clock, LoxCallable};
 use super::environment::Environment;
 use super::error::{Error, Result};
 use super::expr;
@@ -12,13 +13,17 @@ use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
+    pub globals: Rc<Environment>,
     environment: Rc<Environment>,
 }
 
 impl Interpreter {
     pub fn new(environment: Environment) -> Interpreter {
+        let globals = Rc::new(environment);
+        globals.define(String::from("clock"), &Object::Clock(Clock {}));
         Interpreter {
-            environment: Rc::new(environment),
+            globals: globals.clone(),
+            environment: globals.clone(),
         }
     }
 
@@ -47,6 +52,8 @@ impl Interpreter {
                 Literal::Bool(b) => b,
                 _ => true,
             },
+            // FIXME
+            _ => false,
         }
     }
 
@@ -60,10 +67,12 @@ impl Interpreter {
                 (Literal::Float(a), Literal::Float(b)) => a == b,
                 _ => false,
             },
+            // FIXME
+            _ => false,
         }
     }
 
-    fn execute_block(&mut self, statements: &[Stmt], environment: Environment) -> Result<()> {
+    pub fn execute_block(&mut self, statements: &[Stmt], environment: Environment) -> Result<()> {
         let previous = self.environment.clone();
         self.environment = Rc::new(environment);
         for statement in statements {
@@ -127,6 +136,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                         String::from("Operands must be numbers."),
                     )),
                 },
+                _ => unreachable!(),
             },
             TokenType::GreaterEqual => match (left, right) {
                 (Object::Literal(oll), Object::Literal(olr)) => match (oll, olr) {
@@ -139,6 +149,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                         String::from("Operands must be numbers."),
                     )),
                 },
+                _ => unreachable!(),
             },
             TokenType::Less => match (left, right) {
                 (Object::Literal(oll), Object::Literal(olr)) => match (oll, olr) {
@@ -151,6 +162,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                         String::from("Operands must be numbers."),
                     )),
                 },
+                _ => unreachable!(),
             },
             TokenType::LessEqual => match (left, right) {
                 (Object::Literal(oll), Object::Literal(olr)) => match (oll, olr) {
@@ -163,6 +175,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                         String::from("Operands must be numbers."),
                     )),
                 },
+                _ => unreachable!(),
             },
             TokenType::Minus => match (left, right) {
                 (Object::Literal(oll), Object::Literal(olr)) => match (oll, olr) {
@@ -175,6 +188,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                         String::from("Operands must be numbers."),
                     )),
                 },
+                _ => unreachable!(),
             },
             TokenType::Plus => match (left, right) {
                 (Object::Literal(oll), Object::Literal(olr)) => match (oll, olr) {
@@ -188,6 +202,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                         String::from("Operands must be numbers."),
                     )),
                 },
+                _ => unreachable!(),
             },
             TokenType::Slash => match (left, right) {
                 (Object::Literal(oll), Object::Literal(olr)) => match (oll, olr) {
@@ -200,6 +215,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                         String::from("Operands must be numbers."),
                     )),
                 },
+                _ => unreachable!(),
             },
             TokenType::Star => match (left, right) {
                 (Object::Literal(oll), Object::Literal(olr)) => match (oll, olr) {
@@ -212,10 +228,43 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                         String::from("Operands must be numbers."),
                     )),
                 },
+                _ => unreachable!(),
             },
             TokenType::BangEqual => Ok(Object::Literal(Bool(!self.is_equal(left, right)))),
             TokenType::EqualEqual => Ok(Object::Literal(Bool(self.is_equal(left, right)))),
             _ => Ok(Object::Literal(None)),
+        }
+    }
+
+    fn visit_call(
+        &mut self,
+        callee: &Expr,
+        paren: &Token,
+        arguments: &Vec<Expr>,
+    ) -> Result<Object> {
+        let callee = self.evaluate(callee)?;
+        let mut evaluated_args = vec![];
+        for argument in arguments {
+            evaluated_args.push(self.evaluate(argument)?)
+        }
+        match callee {
+            Object::Callable(func) => {
+                if evaluated_args.len() != func.arity() {
+                    return Err(Error::RuntimeError(
+                        paren.clone(),
+                        format!(
+                            "Expected {} arguments but got {}.",
+                            func.arity(),
+                            evaluated_args.len()
+                        ),
+                    ));
+                }
+                Ok(func.call(self, evaluated_args)?)
+            }
+            _ => Err(Error::RuntimeError(
+                paren.clone(),
+                String::from("Can only call functions and classes."),
+            )),
         }
     }
 
@@ -294,6 +343,18 @@ impl stmt::Visitor<Result<()>> for Interpreter {
                 break;
             }
         }
+        Ok(())
+    }
+    fn visit_function_stmt(
+        &mut self,
+        name: &Token,
+        params: &Vec<Token>,
+        body: &Vec<Stmt>,
+    ) -> Result<()> {
+        use super::callable::LoxFunction;
+        let function =
+            Object::Callable(LoxFunction::new(name.clone(), params.clone(), body.clone()));
+        self.environment.define(name.lexeme.clone(), &function);
         Ok(())
     }
 }

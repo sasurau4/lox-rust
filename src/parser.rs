@@ -35,6 +35,8 @@ impl Parser {
     fn declaration(&mut self) -> ParseResult<Stmt> {
         let result = if self.contains(&[TokenType::Var]) {
             self.var_declaration()
+        } else if self.contains(&[TokenType::Fun]) {
+            self.function(String::from("function"))
         } else {
             self.statement()
         };
@@ -173,6 +175,41 @@ impl Parser {
         let expr = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ':' after value.")?;
         Ok(Stmt::Expression { expression: expr })
+    }
+
+    fn function(&mut self, kind: String) -> ParseResult<Stmt> {
+        let name = self.consume(TokenType::Identifier, &format!("Expect {} name.", kind))?;
+        self.consume(
+            TokenType::LeftParen,
+            &format!("Expect '(' after {} name.", kind),
+        )?;
+        let mut parameters = vec![];
+        loop {
+            if !self.check(TokenType::RightParen) {
+                if parameters.len() >= 255 {
+                    return Err(Parser::error(
+                        self.peek().clone(),
+                        "Cannot have more than 255 parameters.",
+                    ));
+                }
+                parameters.push(self.consume(TokenType::Identifier, "Expect parameter name.")?)
+            }
+            if !self.contains(&[TokenType::Comma]) {
+                break;
+            }
+        }
+        self.consume(TokenType::RightParen, "Expect ')' after parameters.")?;
+
+        self.consume(
+            TokenType::LeftBrace,
+            &format!("Expect '{{' before {} body.", kind),
+        )?;
+        let body = self.block()?;
+        Ok(Stmt::Function {
+            name,
+            params: parameters,
+            body,
+        })
     }
 
     fn block(&mut self) -> ParseResult<Vec<Stmt>> {
@@ -324,7 +361,41 @@ impl Parser {
                 right: Box::new(right),
             });
         }
-        self.primary()
+        self.call()
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> ParseResult<Expr> {
+        let mut arguments = vec![];
+        if !self.check(TokenType::RightParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    Parser::error(self.peek().clone(), "Cannot have more than 255 arguments.");
+                }
+                arguments.push(self.expression()?);
+                if !self.contains(&[TokenType::Comma]) {
+                    break;
+                }
+            }
+        }
+
+        let paren = self.consume(TokenType::RightParen, "Expect ')' after arguments.")?;
+        Ok(Expr::Call {
+            callee: Box::new(callee),
+            paren,
+            arguments,
+        })
+    }
+
+    fn call(&mut self) -> ParseResult<Expr> {
+        let mut expr = self.primary()?;
+        loop {
+            if self.contains(&[TokenType::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+        Ok(expr)
     }
 
     fn primary(&mut self) -> ParseResult<Expr> {

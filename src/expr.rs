@@ -9,6 +9,7 @@ pub trait Visitor<T> {
     fn visit_unary(&mut self, operator: &Token, right: &Expr) -> T;
     fn visit_variable(&mut self, name: &Token) -> T;
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> T;
+    fn visit_call(&mut self, callee: &Expr, paren: &Token, arguments: &Vec<Expr>) -> T;
 }
 
 pub trait Acceptor<T> {
@@ -44,6 +45,11 @@ pub enum Expr {
         name: Token,
         value: Box<Expr>,
     },
+    Call {
+        callee: Box<Expr>,
+        paren: Token,
+        arguments: Vec<Expr>,
+    },
 }
 
 impl<T> Acceptor<T> for Expr {
@@ -64,6 +70,11 @@ impl<T> Acceptor<T> for Expr {
             } => visitor.visit_logical(left, operator, right),
             Expr::Variable { name } => visitor.visit_variable(name),
             Expr::Assign { name, value } => visitor.visit_assign(name, value),
+            Expr::Call {
+                callee,
+                paren,
+                arguments,
+            } => visitor.visit_call(callee, paren, arguments),
         }
     }
 }

@@ -13,6 +13,7 @@ pub trait Visitor<T> {
         else_branch: &Option<Box<Stmt>>,
     ) -> T;
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> T;
+    fn visit_function_stmt(&mut self, name: &Token, params: &Vec<Token>, body: &Vec<Stmt>) -> T;
 }
 
 pub trait Acceptor<T> {
@@ -23,6 +24,11 @@ pub trait Acceptor<T> {
 pub enum Stmt {
     Expression {
         expression: Expr,
+    },
+    Function {
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
     },
     Print {
         expression: Expr,
@@ -58,6 +64,9 @@ impl<T> Acceptor<T> for Stmt {
                 else_branch,
             } => visitor.visit_if_stmt(condition, then_branch, else_branch),
             Stmt::While { condition, body } => visitor.visit_while_stmt(condition, body),
+            Stmt::Function { name, params, body } => {
+                visitor.visit_function_stmt(name, params, body)
+            }
         }
     }
 }

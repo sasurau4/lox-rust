@@ -11,6 +11,7 @@ use std::io::{self, BufReader};
 use std::process::exit;
 
 // mod ast_printer;
+mod callable;
 mod environment;
 mod error;
 mod expr;
