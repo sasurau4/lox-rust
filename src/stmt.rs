@@ -14,6 +14,7 @@ pub trait Visitor<T> {
     ) -> T;
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> T;
     fn visit_function_stmt(&mut self, name: &Token, params: &[Token], body: &[Stmt]) -> T;
+    fn visit_return_stmt(&mut self, keyword: &Token, value: &Expr) -> T;
 }
 
 pub trait Acceptor<T> {
@@ -32,6 +33,10 @@ pub enum Stmt {
     },
     Print {
         expression: Expr,
+    },
+    Return {
+        keyword: Token,
+        value: Expr,
     },
     Var {
         name: Token,
@@ -67,6 +72,7 @@ impl<T> Acceptor<T> for Stmt {
             Stmt::Function { name, params, body } => {
                 visitor.visit_function_stmt(name, params, body)
             }
+            Stmt::Return { keyword, value } => visitor.visit_return_stmt(keyword, value),
         }
     }
 }

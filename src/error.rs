@@ -1,9 +1,11 @@
+use super::object::Object;
 use super::token::Token;
 use super::token_type::TokenType;
 use log::error;
 
 #[derive(Debug, Clone)]
 pub enum Error {
+    Return(Object),
     ParseError(String),
     RuntimeError(Token, String),
 }

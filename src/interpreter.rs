@@ -350,4 +350,14 @@ impl stmt::Visitor<Result<()>> for Interpreter {
         self.environment.define(name.lexeme.clone(), &function);
         Ok(())
     }
+    fn visit_return_stmt(&mut self, _keyword: &Token, v: &Expr) -> Result<()> {
+        let evaluated_value = match v {
+            Expr::Literal { value } => match value {
+                Literal::None => Object::Literal(Literal::None),
+                _ => self.evaluate(&v)?,
+            },
+            _ => self.evaluate(&v)?,
+        };
+        Err(Error::Return(evaluated_value))
+    }
 }

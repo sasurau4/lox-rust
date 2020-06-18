@@ -1,5 +1,5 @@
 use super::environment::Environment;
-use super::error::Result;
+use super::error::{Error, Result};
 use super::interpreter::Interpreter;
 use super::stmt::Stmt;
 use super::token::{Literal, Token};
@@ -35,8 +35,11 @@ impl LoxCallable for LoxFunction {
         for (param, arg) in self.params.iter().zip(arguments.iter()) {
             environement.define(param.lexeme.clone(), arg)
         }
-        interpreter.execute_block(&self.body, environement)?;
-        Ok(Object::Literal(Literal::None))
+        match interpreter.execute_block(&self.body, environement) {
+            Ok(_) => Ok(Object::Literal(Literal::None)),
+            Err(Error::Return(return_value)) => Ok(return_value),
+            Err(e) => Err(e),
+        }
     }
     fn arity(&self) -> usize {
         self.params.len()

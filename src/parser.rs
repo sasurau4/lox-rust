@@ -60,6 +60,9 @@ impl Parser {
         if self.contains(&[TokenType::Print]) {
             return self.print_statement();
         }
+        if self.contains(&[TokenType::Return]) {
+            return self.return_statemet();
+        }
         if self.contains(&[TokenType::While]) {
             return self.while_statement();
         }
@@ -143,6 +146,19 @@ impl Parser {
         let value = self.expression()?;
         self.consume(TokenType::Semicolon, "Expect ':' after value.")?;
         Ok(Stmt::Print { expression: value })
+    }
+
+    fn return_statemet(&mut self) -> ParseResult<Stmt> {
+        let keyword = self.previous().clone();
+        let value = if !self.check(TokenType::Semicolon) {
+            self.expression()?
+        } else {
+            Expr::Literal {
+                value: Literal::None,
+            }
+        };
+        self.consume(TokenType::Semicolon, "Expect ';' after return value.")?;
+        Ok(Stmt::Return { keyword, value })
     }
 
     fn var_declaration(&mut self) -> ParseResult<Stmt> {
