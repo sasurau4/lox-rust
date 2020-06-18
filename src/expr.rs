@@ -9,7 +9,7 @@ pub trait Visitor<T> {
     fn visit_unary(&mut self, operator: &Token, right: &Expr) -> T;
     fn visit_variable(&mut self, name: &Token) -> T;
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> T;
-    fn visit_call(&mut self, callee: &Expr, paren: &Token, arguments: &Vec<Expr>) -> T;
+    fn visit_call(&mut self, callee: &Expr, paren: &Token, arguments: &[Expr]) -> T;
 }
 
 pub trait Acceptor<T> {

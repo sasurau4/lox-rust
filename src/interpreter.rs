@@ -236,12 +236,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
         }
     }
 
-    fn visit_call(
-        &mut self,
-        callee: &Expr,
-        paren: &Token,
-        arguments: &Vec<Expr>,
-    ) -> Result<Object> {
+    fn visit_call(&mut self, callee: &Expr, paren: &Token, arguments: &[Expr]) -> Result<Object> {
         let callee = self.evaluate(callee)?;
         let mut evaluated_args = vec![];
         for argument in arguments {
@@ -345,15 +340,13 @@ impl stmt::Visitor<Result<()>> for Interpreter {
         }
         Ok(())
     }
-    fn visit_function_stmt(
-        &mut self,
-        name: &Token,
-        params: &Vec<Token>,
-        body: &Vec<Stmt>,
-    ) -> Result<()> {
+    fn visit_function_stmt(&mut self, name: &Token, params: &[Token], body: &[Stmt]) -> Result<()> {
         use super::callable::LoxFunction;
-        let function =
-            Object::Callable(LoxFunction::new(name.clone(), params.clone(), body.clone()));
+        let function = Object::Callable(LoxFunction::new(
+            name.clone(),
+            params.to_vec(),
+            body.to_vec(),
+        ));
         self.environment.define(name.lexeme.clone(), &function);
         Ok(())
     }

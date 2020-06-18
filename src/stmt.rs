@@ -13,7 +13,7 @@ pub trait Visitor<T> {
         else_branch: &Option<Box<Stmt>>,
     ) -> T;
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> T;
-    fn visit_function_stmt(&mut self, name: &Token, params: &Vec<Token>, body: &Vec<Stmt>) -> T;
+    fn visit_function_stmt(&mut self, name: &Token, params: &[Token], body: &[Stmt]) -> T;
 }
 
 pub trait Acceptor<T> {
