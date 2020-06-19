@@ -4,6 +4,7 @@ use super::interpreter::Interpreter;
 use super::stmt::Stmt;
 use super::token::{Literal, Token};
 use std::fmt;
+use std::rc::Rc;
 use std::time::SystemTime;
 
 use super::object::Object;
@@ -15,23 +16,32 @@ pub trait LoxCallable {
 
 #[derive(Debug, Clone)]
 pub struct LoxFunction {
+    // Note: declaration
     name: Token,
     params: Vec<Token>,
     body: Vec<Stmt>,
+    closure: Rc<Environment>,
 }
 
 impl LoxFunction {
-    pub fn new(name: Token, params: Vec<Token>, body: Vec<Stmt>) -> LoxFunction {
-        LoxFunction { name, params, body }
+    pub fn new(
+        name: Token,
+        params: Vec<Token>,
+        body: Vec<Stmt>,
+        env: Rc<Environment>,
+    ) -> LoxFunction {
+        LoxFunction {
+            name,
+            params,
+            body,
+            closure: env,
+        }
     }
 }
 
 impl LoxCallable for LoxFunction {
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Object>) -> Result<Object> {
-        let environement = Environment::new(
-            Some(interpreter.globals.clone()),
-            interpreter.globals.is_repl,
-        );
+        let environement = Environment::new(Some(Rc::clone(&self.closure)), self.closure.is_repl);
         for (param, arg) in self.params.iter().zip(arguments.iter()) {
             environement.define(param.lexeme.clone(), arg)
         }

@@ -346,6 +346,7 @@ impl stmt::Visitor<Result<()>> for Interpreter {
             name.clone(),
             params.to_vec(),
             body.to_vec(),
+            Rc::clone(&self.environment),
         ));
         self.environment.define(name.lexeme.clone(), &function);
         Ok(())
