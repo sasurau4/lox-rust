@@ -8,7 +8,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone)]
 pub struct Environment {
     enclosing: Option<Rc<Environment>>,
-    values: RefCell<HashMap<String, Object>>,
+    pub values: RefCell<HashMap<String, Object>>,
     pub is_repl: bool,
 }
 
@@ -39,6 +39,20 @@ impl Environment {
         }
     }
 
+    pub fn get_at(&self, distance: usize, name: String) -> Result<Object> {
+        match self.ancestor(distance).values.borrow().get(&name) {
+            Some(o) => Ok(o.clone()),
+            None => unreachable!(),
+        }
+    }
+
+    pub fn assign_at(&self, distance: usize, name: Token, value: Object) {
+        self.ancestor(distance)
+            .values
+            .borrow_mut()
+            .insert(name.lexeme, value);
+    }
+
     pub fn assign(&self, name: &Token, value: &Object) -> Result<()> {
         if self.values.borrow().contains_key(&name.lexeme) {
             self.values
@@ -55,5 +69,15 @@ impl Environment {
             name.clone(),
             format!("Undefined variable '{}'", &name.lexeme),
         ))
+    }
+
+    fn ancestor(&self, distance: usize) -> Environment {
+        let mut environment = self.clone();
+        for _ in 0..distance {
+            environment = Rc::get_mut(&mut environment.enclosing.unwrap())
+                .unwrap()
+                .clone();
+        }
+        environment
     }
 }

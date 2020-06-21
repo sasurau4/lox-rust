@@ -9,12 +9,14 @@ use super::stmt::{Acceptor as StmtAcceptor, Stmt};
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
 use log::error;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
     pub globals: Rc<Environment>,
     environment: Rc<Environment>,
+    locals: HashMap<Expr, usize>,
 }
 
 impl Interpreter {
@@ -23,7 +25,8 @@ impl Interpreter {
         globals.define(String::from("clock"), &Object::Clock(Clock {}));
         Interpreter {
             globals: globals.clone(),
-            environment: globals.clone(),
+            environment: globals,
+            locals: HashMap::new(),
         }
     }
 
@@ -34,6 +37,11 @@ impl Interpreter {
                 Err(r) => error!("{:?}", r),
             }
         }
+        Ok(())
+    }
+
+    pub fn resolve(&mut self, expr: Expr, depth: usize) -> Result<()> {
+        self.locals.insert(expr, depth);
         Ok(())
     }
 
@@ -54,6 +62,16 @@ impl Interpreter {
             },
             // FIXME
             _ => false,
+        }
+    }
+
+    fn look_up_variable(&mut self, name: &Token) -> Result<Object> {
+        let expr = Expr::Variable { name: name.clone() };
+        match self.locals.get(&expr) {
+            Some(distance) => self
+                .environment
+                .get_at(distance.clone(), name.lexeme.clone()),
+            _ => self.globals.get(name),
         }
     }
 
@@ -116,7 +134,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
     }
 
     fn visit_variable(&mut self, name: &Token) -> Result<Object> {
-        self.environment.get(name)
+        self.look_up_variable(name)
     }
 
     fn visit_binary(&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<Object> {
@@ -282,9 +300,19 @@ impl expr::Visitor<Result<Object>> for Interpreter {
     }
 
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> Result<Object> {
-        let value = self.evaluate(value)?;
-        self.environment.assign(name, &value)?;
-        Ok(value)
+        let evaluated_value = self.evaluate(value)?;
+        let expr = Expr::Assign {
+            name: name.clone(),
+            value: Box::new(value.clone()),
+        };
+        match self.locals.get(&expr) {
+            Some(distance) => {
+                self.environment
+                    .assign_at(distance.clone(), name.clone(), evaluated_value.clone());
+            }
+            None => self.globals.assign(name, &evaluated_value)?,
+        }
+        Ok(evaluated_value)
     }
 }
 

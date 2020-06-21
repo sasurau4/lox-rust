@@ -5,6 +5,7 @@ use error::{Error, Result};
 use interpreter::Interpreter;
 use log::{debug, info};
 use parser::Parser;
+use resolver::Resolver;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, BufReader};
@@ -19,6 +20,7 @@ mod interpreter;
 mod lexer;
 mod object;
 mod parser;
+mod resolver;
 mod stmt;
 mod token;
 mod token_type;
@@ -108,9 +110,12 @@ fn run(source: &str, interpreter: &mut Interpreter) -> Result<()> {
         Ok(result) => result,
         _ => return Err(Error::ParseError(String::from("parse error"))),
     };
+
+    let mut resolver = Resolver::new(interpreter);
+    resolver.resolve_statements(&statements)?;
+
     // let ast_printer = AstPrinter {};
     // println!("AST result: {}", ast_printer.print(statements.clone()));
-    let result = interpreter.interpret(statements);
+    interpreter.clone().interpret(statements)
     // println!("Evaluated result: {:?}", result);
-    result
 }

@@ -1,5 +1,6 @@
 use super::token_type::TokenType;
 use std::fmt;
+use std::hash::{Hash, Hasher};
 
 #[derive(Debug, Clone)]
 pub enum Literal {
@@ -22,7 +23,34 @@ impl fmt::Display for Literal {
     }
 }
 
-#[derive(Debug, Clone)]
+impl Eq for Literal {}
+
+impl PartialEq for Literal {
+    fn eq(&self, other: &Literal) -> bool {
+        match (self, other) {
+            (Literal::Bool(a), Literal::Bool(b)) => a.eq(b),
+            (Literal::Isize(a), Literal::Isize(b)) => a.eq(b),
+            (Literal::String(a), Literal::String(b)) => a.eq(b),
+            (Literal::Float(a), Literal::Float(b)) => a.eq(b),
+            (Literal::None, Literal::None) => true,
+            (_, _) => false,
+        }
+    }
+}
+
+impl Hash for Literal {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Literal::Isize(i) => i.hash(state),
+            Literal::String(s) => s.hash(state),
+            Literal::Float(f) => f.to_bits().hash(state),
+            Literal::Bool(b) => b.hash(state),
+            Literal::None => "".hash(state),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Token {
     pub token_type: TokenType,
     pub lexeme: String,

@@ -16,7 +16,7 @@ pub trait Acceptor<T> {
     fn accept(&self, visitor: &mut dyn Visitor<T>) -> T;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,
