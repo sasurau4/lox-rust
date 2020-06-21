@@ -1,0 +1,20 @@
+var a = 0;
+var b = 1;
+
+print "Using for statement.";
+while (a < 10000) {
+  print a;
+  var temp = a;
+  a = b;
+  b = temp + b;
+}
+
+print "";
+print "Using for statement.";
+var c = 0; 
+var temp = 0;
+for (var d = 1; c < 10000; d = temp + d) {
+  print c;
+  temp = c;
+  c = d;
+}

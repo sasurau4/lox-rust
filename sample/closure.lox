@@ -1,0 +1,22 @@
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
+  }
+  return count;
+}
+
+var counter = makeCounter();
+print "This is closure";
+print counter;
+counter();
+counter();
+
+fun fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n-2) + fibonacci(n-1);
+}
+
+print "11th fibonacci sequense is";
+print fibonacci(10);
