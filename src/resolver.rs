@@ -1,3 +1,4 @@
+use super::callable::FunctionType;
 use super::error::{resolve_error, Error, Result};
 use super::expr::Expr;
 use super::expr::{Acceptor as ExprAcceptor, Visitor as ExprVisitor};
@@ -11,6 +12,7 @@ use std::collections::HashMap;
 pub struct Resolver<'a> {
     interpreter: &'a mut Interpreter,
     pub scopes: Vec<HashMap<String, bool>>,
+    current_function: FunctionType,
 }
 
 impl<'a> Resolver<'a> {
@@ -18,6 +20,7 @@ impl<'a> Resolver<'a> {
         Resolver {
             interpreter,
             scopes: Vec::new(),
+            current_function: FunctionType::None,
         }
     }
 
@@ -36,7 +39,16 @@ impl<'a> Resolver<'a> {
         expr.accept(self)
     }
 
-    fn resolve_function(&mut self, _name: &Token, params: &[Token], body: &[Stmt]) -> Result<()> {
+    fn resolve_function(
+        &mut self,
+        _name: &Token,
+        params: &[Token],
+        body: &[Stmt],
+        func_type: FunctionType,
+    ) -> Result<()> {
+        let enclosing_function = self.current_function;
+        self.current_function = func_type;
+
         self.begin_scope();
         for param in params {
             self.declare(param)?;
@@ -44,6 +56,7 @@ impl<'a> Resolver<'a> {
         }
         self.resolve_statements(body)?;
         self.end_scope();
+        self.current_function = enclosing_function;
         Ok(())
     }
 
@@ -183,7 +196,7 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
         self.declare(name)?;
         self.define(name);
 
-        self.resolve_function(name, params, body)?;
+        self.resolve_function(name, params, body, FunctionType::Function)?;
         Ok(())
     }
     fn visit_if_stmt(
@@ -203,7 +216,13 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
         self.resolve_expr(expression)?;
         Ok(())
     }
-    fn visit_return_stmt(&mut self, _keyword: &Token, v: &Expr) -> Result<()> {
+    fn visit_return_stmt(&mut self, keyword: &Token, v: &Expr) -> Result<()> {
+        if self.current_function == FunctionType::None {
+            return Err(Error::ResolveError(
+                keyword.clone(),
+                String::from("Cannot return from top-level code."),
+            ));
+        }
         match v {
             Expr::Literal { value } => match value {
                 Literal::None => Ok(()),

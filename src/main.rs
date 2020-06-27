@@ -3,7 +3,7 @@ use clap::{App, Arg};
 use environment::Environment;
 use error::{Error, Result};
 use interpreter::Interpreter;
-use log::{debug, info};
+use log::{debug, error, info};
 use parser::Parser;
 use resolver::Resolver;
 use std::fs::File;
@@ -76,7 +76,8 @@ fn run_file(path: &str) -> io::Result<()> {
         source.push_str(&line.unwrap());
         source.push_str("\n")
     }
-    if let Err(_) = run(&source, &mut interpreter) {
+    if let Err(e) = run(&source, &mut interpreter) {
+        error!("{:?}", e);
         exit(70);
     };
 
@@ -94,7 +95,9 @@ fn run_prompt() -> io::Result<()> {
 
     for line in stdin.lock().lines() {
         source.push_str(&line.unwrap());
-        if let Err(_) = run(&source, &mut interpreter) {};
+        if let Err(e) = run(&source, &mut interpreter) {
+            error!("{:?}", e);
+        };
         source = String::from("");
         print!("> ");
         stdout.flush().unwrap();

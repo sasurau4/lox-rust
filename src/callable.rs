@@ -82,3 +82,9 @@ impl fmt::Display for Clock {
         write!(f, "<native fn>")
     }
 }
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum FunctionType {
+    None,
+    Function,
+}
