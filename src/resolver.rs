@@ -28,6 +28,17 @@ impl<'a> Resolver<'a> {
         for statement in statements {
             self.resolve_statement(statement)?;
         }
+        println!("debug: {:?}", self.scopes);
+        // for scope in self.scopes.clone() {
+        //     for (var_name, defined) in scope.iter() {
+        //         if !defined {
+        //             return Err(Error::ResolveError(
+        //                 var_name,
+        //                 String::from("Unused variable exists"),
+        //             ));
+        //         }
+        //     }
+        // }
         Ok(())
     }
 
@@ -105,6 +116,7 @@ impl<'a> Resolver<'a> {
     }
 
     fn end_scope(&mut self) {
+        println!("debug: {:?}", self.scopes);
         self.scopes.pop();
     }
 }

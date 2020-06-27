@@ -274,6 +274,19 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                 }
                 Ok(func.call(self, evaluated_args)?)
             }
+            Object::Clock(func) => {
+                if evaluated_args.len() != func.arity() {
+                    return Err(Error::RuntimeError(
+                        paren.clone(),
+                        format!(
+                            "Expected {} arguments but got {}.",
+                            func.arity(),
+                            evaluated_args.len()
+                        ),
+                    ));
+                }
+                Ok(func.call(self, evaluated_args)?)
+            }
             _ => Err(Error::RuntimeError(
                 paren.clone(),
                 String::from("Can only call functions and classes."),
