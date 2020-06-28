@@ -28,17 +28,6 @@ impl<'a> Resolver<'a> {
         for statement in statements {
             self.resolve_statement(statement)?;
         }
-        println!("debug: {:?}", self.scopes);
-        // for scope in self.scopes.clone() {
-        //     for (var_name, defined) in scope.iter() {
-        //         if !defined {
-        //             return Err(Error::ResolveError(
-        //                 var_name,
-        //                 String::from("Unused variable exists"),
-        //             ));
-        //         }
-        //     }
-        // }
         Ok(())
     }
 
@@ -116,7 +105,6 @@ impl<'a> Resolver<'a> {
     }
 
     fn end_scope(&mut self) {
-        println!("debug: {:?}", self.scopes);
         self.scopes.pop();
     }
 }
@@ -189,6 +177,11 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
         self.begin_scope();
         self.resolve_statements(statements)?;
         self.end_scope();
+        Ok(())
+    }
+    fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<()> {
+        self.declare(name)?;
+        self.define(name);
         Ok(())
     }
 

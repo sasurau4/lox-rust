@@ -3,6 +3,7 @@ use super::environment::Environment;
 use super::error::{Error, Result};
 use super::expr;
 use super::expr::{Acceptor as ExprAcceptor, Expr};
+use super::lox_class::LoxClass;
 use super::object::Object;
 use super::stmt;
 use super::stmt::{Acceptor as StmtAcceptor, Stmt};
@@ -287,6 +288,19 @@ impl expr::Visitor<Result<Object>> for Interpreter {
                 }
                 Ok(func.call(self, evaluated_args)?)
             }
+            Object::Class(class) => {
+                if evaluated_args.len() != class.arity() {
+                    return Err(Error::RuntimeError(
+                        paren.clone(),
+                        format!(
+                            "Expected {} arguments but got {}.",
+                            class.arity(),
+                            evaluated_args.len()
+                        ),
+                    ));
+                }
+                Ok(class.call(self, evaluated_args)?)
+            }
             _ => Err(Error::RuntimeError(
                 paren.clone(),
                 String::from("Can only call functions and classes."),
@@ -368,6 +382,15 @@ impl stmt::Visitor<Result<()>> for Interpreter {
             statements,
             Environment::new(Some(Rc::clone(&self.environment)), self.environment.is_repl),
         )?;
+        Ok(())
+    }
+    fn visit_class_stmt(&mut self, name: &Token, _methods: &[Stmt]) -> Result<()> {
+        self.environment
+            .define(name.lexeme.clone(), &Object::Literal(Literal::None));
+        let klass = LoxClass {
+            name: name.lexeme.clone(),
+        };
+        self.environment.assign(name, &Object::Class(klass))?;
         Ok(())
     }
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<()> {

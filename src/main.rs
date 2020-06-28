@@ -18,6 +18,8 @@ mod error;
 mod expr;
 mod interpreter;
 mod lexer;
+mod lox_class;
+mod lox_instance;
 mod object;
 mod parser;
 mod resolver;

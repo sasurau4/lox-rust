@@ -1,4 +1,6 @@
 use super::callable;
+use super::lox_class;
+use super::lox_instance;
 use super::token;
 use std::fmt;
 
@@ -7,6 +9,8 @@ pub enum Object {
     Literal(token::Literal),
     Callable(callable::LoxFunction),
     Clock(callable::Clock),
+    Class(lox_class::LoxClass),
+    Instance(lox_instance::LoxInstance),
 }
 
 impl fmt::Display for Object {
@@ -15,6 +19,8 @@ impl fmt::Display for Object {
             Object::Literal(l) => write!(f, "{}", l),
             Object::Callable(l) => write!(f, "{}", l),
             Object::Clock(l) => write!(f, "{}", l),
+            Object::Class(l) => write!(f, "{}", l),
+            Object::Instance(l) => write!(f, "{}", l),
         }
     }
 }

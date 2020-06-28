@@ -15,6 +15,7 @@ pub trait Visitor<T> {
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> T;
     fn visit_function_stmt(&mut self, name: &Token, params: &[Token], body: &[Stmt]) -> T;
     fn visit_return_stmt(&mut self, keyword: &Token, value: &Expr) -> T;
+    fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> T;
 }
 
 pub trait Acceptor<T> {
@@ -45,6 +46,11 @@ pub enum Stmt {
     Block {
         statements: Vec<Stmt>,
     },
+    Class {
+        name: Token,
+        // Note: only for Stmt::Funtion
+        methods: Vec<Stmt>,
+    },
     If {
         condition: Expr,
         then_branch: Box<Stmt>,
@@ -73,6 +79,7 @@ impl<T> Acceptor<T> for Stmt {
                 visitor.visit_function_stmt(name, params, body)
             }
             Stmt::Return { keyword, value } => visitor.visit_return_stmt(keyword, value),
+            Stmt::Class { name, methods } => visitor.visit_class_stmt(name, methods),
         }
     }
 }
