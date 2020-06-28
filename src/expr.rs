@@ -10,6 +10,8 @@ pub trait Visitor<T> {
     fn visit_variable(&mut self, name: &Token) -> T;
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> T;
     fn visit_call(&mut self, callee: &Expr, paren: &Token, arguments: &[Expr]) -> T;
+    fn visit_get(&mut self, object: &Expr, name: &Token) -> T;
+    fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> T;
 }
 
 pub trait Acceptor<T> {
@@ -27,6 +29,10 @@ pub enum Expr {
         operator: Token,
         right: Box<Expr>,
     },
+    Get {
+        object: Box<Expr>,
+        name: Token,
+    },
     Grouping {
         expression: Box<Expr>,
     },
@@ -37,6 +43,11 @@ pub enum Expr {
         left: Box<Expr>,
         operator: Token,
         right: Box<Expr>,
+    },
+    Set {
+        object: Box<Expr>,
+        name: Token,
+        value: Box<Expr>,
     },
     Variable {
         name: Token,
@@ -75,6 +86,12 @@ impl<T> Acceptor<T> for Expr {
                 paren,
                 arguments,
             } => visitor.visit_call(callee, paren, arguments),
+            Expr::Get { object, name } => visitor.visit_get(object, name),
+            Expr::Set {
+                object,
+                name,
+                value,
+            } => visitor.visit_set(object, name, value),
         }
     }
 }

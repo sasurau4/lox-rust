@@ -151,6 +151,9 @@ impl<'a> ExprVisitor<Result<()>> for Resolver<'a> {
         }
         Ok(())
     }
+    fn visit_get(&mut self, object: &Expr, _name: &Token) -> Result<()> {
+        self.resolve_expr(object)
+    }
     fn visit_grouping(&mut self, expression: &Expr) -> Result<()> {
         self.resolve_expr(expression)?;
         Ok(())
@@ -162,6 +165,10 @@ impl<'a> ExprVisitor<Result<()>> for Resolver<'a> {
         self.resolve_expr(left)?;
         self.resolve_expr(right)?;
         Ok(())
+    }
+    fn visit_set(&mut self, object: &Expr, _name: &Token, value: &Expr) -> Result<()> {
+        self.resolve_expr(value)?;
+        self.resolve_expr(object)
     }
     fn visit_unary(&mut self, _operator: &Token, right: &Expr) -> Result<()> {
         self.resolve_expr(right)?;
@@ -182,6 +189,18 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
     fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<()> {
         self.declare(name)?;
         self.define(name);
+
+        for method in methods {
+            let declaration = FunctionType::Method;
+            match method {
+                Stmt::Function {
+                    name: func_name,
+                    params,
+                    body,
+                } => self.resolve_function(func_name, params, body, declaration)?,
+                _ => unreachable!(),
+            }
+        }
         Ok(())
     }
 

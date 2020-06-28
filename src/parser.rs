@@ -264,6 +264,11 @@ impl Parser {
                     name,
                     value: Box::new(value),
                 }),
+                Expr::Get { object, name } => Ok(Expr::Set {
+                    object,
+                    name,
+                    value: Box::new(value),
+                }),
                 _ => Err(Parser::error(equals, "Invalid assignment target.")),
             };
         }
@@ -422,6 +427,13 @@ impl Parser {
         loop {
             if self.contains(&[TokenType::LeftParen]) {
                 expr = self.finish_call(expr)?;
+            } else if self.contains(&[TokenType::Dot]) {
+                let name =
+                    self.consume(TokenType::Identifier, "Expect property name after '.'.")?;
+                expr = Expr::Get {
+                    object: Box::new(expr),
+                    name,
+                }
             } else {
                 break;
             }

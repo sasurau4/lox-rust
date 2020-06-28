@@ -307,6 +307,16 @@ impl expr::Visitor<Result<Object>> for Interpreter {
             )),
         }
     }
+    fn visit_get(&mut self, object: &Expr, name: &Token) -> Result<Object> {
+        let evaluated_object = self.evaluate(object)?;
+        match evaluated_object {
+            Object::Instance(instance) => Ok(instance.get(name)?),
+            _ => Err(Error::RuntimeError(
+                name.clone(),
+                String::from("Only instances have properties."),
+            )),
+        }
+    }
 
     fn visit_literal(&mut self, expr: &Literal) -> Result<Object> {
         Ok(Object::Literal(expr.clone()))
@@ -324,6 +334,20 @@ impl expr::Visitor<Result<Object>> for Interpreter {
             return evaluated_left;
         }
         self.evaluate(right)
+    }
+    fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Result<Object> {
+        let evaluated_object = self.evaluate(object)?;
+        match evaluated_object {
+            Object::Instance(instance) => {
+                let evaluated_value = self.evaluate(value)?;
+                instance.set(name, &evaluated_value);
+                Ok(evaluated_value)
+            }
+            _ => Err(Error::RuntimeError(
+                name.clone(),
+                String::from("Only instances have fields."),
+            )),
+        }
     }
 
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> Result<Object> {
@@ -384,12 +408,30 @@ impl stmt::Visitor<Result<()>> for Interpreter {
         )?;
         Ok(())
     }
-    fn visit_class_stmt(&mut self, name: &Token, _methods: &[Stmt]) -> Result<()> {
+    fn visit_class_stmt(&mut self, name: &Token, class_methods: &[Stmt]) -> Result<()> {
+        use super::callable::LoxFunction;
         self.environment
             .define(name.lexeme.clone(), &Object::Literal(Literal::None));
-        let klass = LoxClass {
-            name: name.lexeme.clone(),
-        };
+        let mut methods = HashMap::new();
+        for method in class_methods {
+            match method {
+                Stmt::Function {
+                    name: func_name,
+                    params,
+                    body,
+                } => {
+                    let function = LoxFunction::new(
+                        func_name.clone(),
+                        params.to_vec(),
+                        body.to_vec(),
+                        Rc::clone(&self.environment),
+                    );
+                    methods.insert(func_name.lexeme.clone(), function);
+                }
+                _ => unreachable!(),
+            }
+        }
+        let klass = LoxClass::new(name.lexeme.clone(), methods);
         self.environment.assign(name, &Object::Class(klass))?;
         Ok(())
     }

@@ -1,20 +1,28 @@
-use super::callable::LoxCallable;
+use super::callable::{LoxCallable, LoxFunction};
 use super::error::{Error, Result};
 use super::interpreter::Interpreter;
 use super::lox_instance::LoxInstance;
 use super::object::Object;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct LoxClass {
     pub name: String,
+    methods: HashMap<String, LoxFunction>,
 }
 
+impl LoxClass {
+    pub fn new(name: String, methods: HashMap<String, LoxFunction>) -> LoxClass {
+        LoxClass { name, methods }
+    }
+    pub fn find_method(&self, name: String) -> Option<&LoxFunction> {
+        self.methods.get(&name)
+    }
+}
 impl LoxCallable for LoxClass {
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Object>) -> Result<Object> {
-        Ok(Object::Instance(LoxInstance {
-            class: self.clone(),
-        }))
+        Ok(Object::Instance(LoxInstance::new(self.clone())))
     }
     fn arity(&self) -> usize {
         0
