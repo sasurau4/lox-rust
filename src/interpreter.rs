@@ -262,7 +262,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
             evaluated_args.push(self.evaluate(argument)?)
         }
         match callee {
-            Object::Callable(func) => {
+            Object::Func(func) => {
                 if evaluated_args.len() != func.arity() {
                     return Err(Error::RuntimeError(
                         paren.clone(),
@@ -406,7 +406,7 @@ impl stmt::Visitor<Result<()>> for Interpreter {
     }
     fn visit_function_stmt(&mut self, name: &Token, params: &[Token], body: &[Stmt]) -> Result<()> {
         use super::callable::LoxFunction;
-        let function = Object::Callable(LoxFunction::new(
+        let function = Object::Func(LoxFunction::new(
             name.clone(),
             params.to_vec(),
             body.to_vec(),
