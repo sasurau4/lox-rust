@@ -3,17 +3,18 @@ use super::object::Object;
 use super::token::Token;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::fmt;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Environment {
-    enclosing: Option<Rc<Environment>>,
+    enclosing: Option<Rc<RefCell<Environment>>>,
     pub values: RefCell<HashMap<String, Object>>,
     pub is_repl: bool,
 }
 
 impl Environment {
-    pub fn new(enclosing: Option<Rc<Environment>>, is_repl: bool) -> Environment {
+    pub fn new(enclosing: Option<Rc<RefCell<Environment>>>, is_repl: bool) -> Environment {
         let values = HashMap::new();
         Environment {
             enclosing,
@@ -27,16 +28,16 @@ impl Environment {
     }
 
     pub fn get(&self, name: &Token) -> Result<Object> {
-        match self.values.borrow_mut().get(&name.lexeme) {
-            Some(r) => Ok(r.clone()),
-            None => match self.enclosing.clone() {
-                Some(enclosing) => enclosing.get(name),
-                None => Err(Error::RuntimeError(
-                    name.clone(),
-                    format!("Undefined variableble '{}'.", &name.lexeme),
-                )),
-            },
+        if let Some(r) = self.values.borrow().get(&name.lexeme) {
+            return Ok(r.clone());
         }
+        if let Some(enclosing) = &self.enclosing {
+            return enclosing.borrow().get(name);
+        }
+        Err(Error::RuntimeError(
+            name.clone(),
+            format!("Undefined variableble '{}'.", &name.lexeme),
+        ))
     }
 
     pub fn get_at(&self, distance: usize, name: String) -> Result<Object> {
@@ -61,9 +62,8 @@ impl Environment {
             return Ok(());
         }
 
-        if self.enclosing.clone().is_some() {
-            self.enclosing.clone().unwrap().assign(name, value)?;
-            return Ok(());
+        if let Some(enclosing) = &self.enclosing {
+            return enclosing.borrow_mut().assign(name, value);
         }
         Err(Error::RuntimeError(
             name.clone(),
@@ -73,11 +73,20 @@ impl Environment {
 
     fn ancestor(&self, distance: usize) -> Environment {
         let mut environment = self.clone();
-        for _ in 0..distance {
-            environment = Rc::get_mut(&mut environment.enclosing.unwrap())
-                .unwrap()
+        for _i in 0..distance {
+            let enclosing = environment
+                .enclosing
+                .unwrap_or_else(|| panic!("No enclosing format at distance: {}", distance))
+                .borrow()
                 .clone();
+            environment = enclosing
         }
         environment
+    }
+}
+
+impl fmt::Display for Environment {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "This env has keys {:?}", self.values.borrow().keys(),)
     }
 }

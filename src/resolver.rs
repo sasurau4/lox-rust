@@ -65,11 +65,17 @@ impl<'a> Resolver<'a> {
             return Ok(());
         }
         let scopes_count = self.scopes.len();
-        for i in (scopes_count - 1)..=0 {
-            if self.scopes.get(i).unwrap().contains_key(&name.lexeme) {
-                self.interpreter.resolve(expr, scopes_count - 1 - i)?;
-                return Ok(());
+        let mut i = scopes_count - 1;
+        #[allow(unused_comparisons)]
+        #[allow(clippy::absurd_extreme_comparisons)]
+        while i >= 0 {
+            if let Some(scope) = self.scopes.get(i) {
+                if let Some(_r) = scope.get(&name.lexeme) {
+                    self.interpreter.resolve(expr, scopes_count - 1 - i)?;
+                    return Ok(());
+                }
             }
+            i -= 1;
         }
         // Not found. Assume it is global.
         Ok(())
@@ -170,6 +176,12 @@ impl<'a> ExprVisitor<Result<()>> for Resolver<'a> {
         self.resolve_expr(value)?;
         self.resolve_expr(object)
     }
+    fn visit_this(&mut self, keyword: &Token) -> Result<()> {
+        let expr = Expr::This {
+            keyword: keyword.clone(),
+        };
+        self.resolve_local(expr, keyword)
+    }
     fn visit_unary(&mut self, _operator: &Token, right: &Expr) -> Result<()> {
         self.resolve_expr(right)?;
         Ok(())
@@ -190,6 +202,10 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
         self.declare(name)?;
         self.define(name);
 
+        self.begin_scope();
+        let mut scope = self.scopes.pop().unwrap();
+        scope.insert("this".to_string(), true);
+        self.scopes.push(scope);
         for method in methods {
             let declaration = FunctionType::Method;
             match method {
@@ -201,6 +217,7 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
                 _ => unreachable!(),
             }
         }
+        self.end_scope();
         Ok(())
     }
 

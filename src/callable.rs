@@ -1,8 +1,10 @@
 use super::environment::Environment;
 use super::error::{Error, Result};
 use super::interpreter::Interpreter;
+use super::lox_instance::LoxInstance;
 use super::stmt::Stmt;
 use super::token::{Literal, Token};
+use std::cell::RefCell;
 use std::fmt;
 use std::rc::Rc;
 use std::time::SystemTime;
@@ -20,7 +22,7 @@ pub struct LoxFunction {
     name: Token,
     params: Vec<Token>,
     body: Vec<Stmt>,
-    closure: Rc<Environment>,
+    closure: Rc<RefCell<Environment>>,
 }
 
 impl LoxFunction {
@@ -28,7 +30,7 @@ impl LoxFunction {
         name: Token,
         params: Vec<Token>,
         body: Vec<Stmt>,
-        env: Rc<Environment>,
+        env: Rc<RefCell<Environment>>,
     ) -> LoxFunction {
         LoxFunction {
             name,
@@ -37,11 +39,28 @@ impl LoxFunction {
             closure: env,
         }
     }
+
+    pub fn bind(&self, instance: LoxInstance) -> LoxFunction {
+        let environement = Environment::new(
+            Some(Rc::clone(&self.closure)),
+            self.closure.borrow().is_repl,
+        );
+        environement.define("this".to_string(), &Object::Instance(instance));
+        LoxFunction::new(
+            self.name.clone(),
+            self.params.clone(),
+            self.body.clone(),
+            Rc::new(RefCell::new(environement)),
+        )
+    }
 }
 
 impl LoxCallable for LoxFunction {
     fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Object>) -> Result<Object> {
-        let environement = Environment::new(Some(Rc::clone(&self.closure)), self.closure.is_repl);
+        let environement = Environment::new(
+            Some(Rc::clone(&self.closure)),
+            self.closure.borrow().is_repl,
+        );
         for (param, arg) in self.params.iter().zip(arguments.iter()) {
             environement.define(param.lexeme.clone(), arg)
         }

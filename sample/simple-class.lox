@@ -1,10 +1,12 @@
 class DevonshireCream {
-  serveOn() {
-    return "Scones";
+  serveOn(who) {
+    return "Scones for " + who;
   }
 }
 
 print DevonshireCream;
+var devon = DevonshireCream();
+print devon.serveOn("John");
 
 class Bagel {}
 var bagel = Bagel();

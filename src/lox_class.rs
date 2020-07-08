@@ -1,5 +1,5 @@
 use super::callable::{LoxCallable, LoxFunction};
-use super::error::{Error, Result};
+use super::error::Result;
 use super::interpreter::Interpreter;
 use super::lox_instance::LoxInstance;
 use super::object::Object;
@@ -21,7 +21,7 @@ impl LoxClass {
     }
 }
 impl LoxCallable for LoxClass {
-    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Object>) -> Result<Object> {
+    fn call(&self, _interpreter: &mut Interpreter, _arguments: Vec<Object>) -> Result<Object> {
         Ok(Object::Instance(LoxInstance::new(self.clone())))
     }
     fn arity(&self) -> usize {

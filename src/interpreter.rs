@@ -10,22 +10,25 @@ use super::stmt::{Acceptor as StmtAcceptor, Stmt};
 use super::token::{Literal, Token};
 use super::token_type::TokenType;
 use log::error;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Interpreter {
-    pub globals: Rc<Environment>,
-    environment: Rc<Environment>,
+    pub globals: Rc<RefCell<Environment>>,
+    environment: Rc<RefCell<Environment>>,
     locals: HashMap<Expr, usize>,
 }
 
 impl Interpreter {
     pub fn new(environment: Environment) -> Interpreter {
-        let globals = Rc::new(environment);
-        globals.define(String::from("clock"), &Object::Clock(Clock {}));
+        let globals = Rc::new(RefCell::new(environment));
+        globals
+            .borrow_mut()
+            .define(String::from("clock"), &Object::Clock(Clock {}));
         Interpreter {
-            globals: globals.clone(),
+            globals: Rc::clone(&globals),
             environment: globals,
             locals: HashMap::new(),
         }
@@ -66,13 +69,13 @@ impl Interpreter {
         }
     }
 
-    fn look_up_variable(&mut self, name: &Token) -> Result<Object> {
-        let expr = Expr::Variable { name: name.clone() };
+    fn look_up_variable(&mut self, name: &Token, expr: &Expr) -> Result<Object> {
         match self.locals.get(&expr) {
             Some(distance) => self
                 .environment
+                .borrow()
                 .get_at(distance.clone(), name.lexeme.clone()),
-            _ => self.globals.get(name),
+            _ => self.globals.borrow().get(name),
         }
     }
 
@@ -93,7 +96,7 @@ impl Interpreter {
 
     pub fn execute_block(&mut self, statements: &[Stmt], environment: Environment) -> Result<()> {
         let previous = self.environment.clone();
-        self.environment = Rc::new(environment);
+        self.environment = Rc::new(RefCell::new(environment));
         for statement in statements {
             match self.execute(statement) {
                 Ok(_) => {}
@@ -135,7 +138,8 @@ impl expr::Visitor<Result<Object>> for Interpreter {
     }
 
     fn visit_variable(&mut self, name: &Token) -> Result<Object> {
-        self.look_up_variable(name)
+        let expr = Expr::Variable { name: name.clone() };
+        self.look_up_variable(name, &expr)
     }
 
     fn visit_binary(&mut self, left: &Expr, operator: &Token, right: &Expr) -> Result<Object> {
@@ -310,7 +314,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
     fn visit_get(&mut self, object: &Expr, name: &Token) -> Result<Object> {
         let evaluated_object = self.evaluate(object)?;
         match evaluated_object {
-            Object::Instance(instance) => Ok(instance.get(name)?),
+            Object::Instance(mut instance) => Ok(instance.get(name)?),
             _ => Err(Error::RuntimeError(
                 name.clone(),
                 String::from("Only instances have properties."),
@@ -338,7 +342,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> Result<Object> {
         let evaluated_object = self.evaluate(object)?;
         match evaluated_object {
-            Object::Instance(instance) => {
+            Object::Instance(mut instance) => {
                 let evaluated_value = self.evaluate(value)?;
                 instance.set(name, &evaluated_value);
                 Ok(evaluated_value)
@@ -349,6 +353,12 @@ impl expr::Visitor<Result<Object>> for Interpreter {
             )),
         }
     }
+    fn visit_this(&mut self, keyword: &Token) -> Result<Object> {
+        let expr = Expr::This {
+            keyword: keyword.clone(),
+        };
+        self.look_up_variable(keyword, &expr)
+    }
 
     fn visit_assign(&mut self, name: &Token, value: &Expr) -> Result<Object> {
         let evaluated_value = self.evaluate(value)?;
@@ -358,10 +368,13 @@ impl expr::Visitor<Result<Object>> for Interpreter {
         };
         match self.locals.get(&expr) {
             Some(distance) => {
-                self.environment
-                    .assign_at(distance.clone(), name.clone(), evaluated_value.clone());
+                self.environment.borrow_mut().assign_at(
+                    distance.clone(),
+                    name.clone(),
+                    evaluated_value.clone(),
+                );
             }
-            None => self.globals.assign(name, &evaluated_value)?,
+            None => self.globals.borrow_mut().assign(name, &evaluated_value)?,
         }
         Ok(evaluated_value)
     }
@@ -370,7 +383,7 @@ impl expr::Visitor<Result<Object>> for Interpreter {
 impl stmt::Visitor<Result<()>> for Interpreter {
     fn visit_expression_stmt(&mut self, expression: &Expr) -> Result<()> {
         let result = self.evaluate(expression)?;
-        if self.environment.is_repl {
+        if self.environment.borrow().is_repl {
             println!("{}", result);
         }
         Ok(())
@@ -398,21 +411,25 @@ impl stmt::Visitor<Result<()>> for Interpreter {
     }
     fn visit_var_stmt(&mut self, name: &Token, initializer: &Expr) -> Result<()> {
         let value = self.evaluate(initializer)?;
-        self.environment.define(name.lexeme.clone(), &value);
+        self.environment
+            .borrow_mut()
+            .define(name.lexeme.clone(), &value);
         Ok(())
     }
     fn visit_block_stmt(&mut self, statements: &[Stmt]) -> Result<()> {
+        let is_repl = self.environment.borrow().is_repl;
         self.execute_block(
             statements,
-            Environment::new(Some(Rc::clone(&self.environment)), self.environment.is_repl),
+            Environment::new(Some(Rc::clone(&self.environment)), is_repl),
         )?;
         Ok(())
     }
     fn visit_class_stmt(&mut self, name: &Token, class_methods: &[Stmt]) -> Result<()> {
         use super::callable::LoxFunction;
         self.environment
+            .borrow_mut()
             .define(name.lexeme.clone(), &Object::Literal(Literal::None));
-        let mut methods = HashMap::new();
+        let mut methods: HashMap<String, LoxFunction> = HashMap::new();
         for method in class_methods {
             match method {
                 Stmt::Function {
@@ -432,7 +449,9 @@ impl stmt::Visitor<Result<()>> for Interpreter {
             }
         }
         let klass = LoxClass::new(name.lexeme.clone(), methods);
-        self.environment.assign(name, &Object::Class(klass))?;
+        self.environment
+            .borrow_mut()
+            .assign(name, &Object::Class(klass))?;
         Ok(())
     }
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<()> {
@@ -454,7 +473,9 @@ impl stmt::Visitor<Result<()>> for Interpreter {
             body.to_vec(),
             Rc::clone(&self.environment),
         ));
-        self.environment.define(name.lexeme.clone(), &function);
+        self.environment
+            .borrow_mut()
+            .define(name.lexeme.clone(), &function);
         Ok(())
     }
     fn visit_return_stmt(&mut self, _keyword: &Token, v: &Expr) -> Result<()> {

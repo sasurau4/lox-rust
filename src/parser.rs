@@ -462,6 +462,11 @@ impl Parser {
                 value: self.previous().literal.clone(),
             });
         }
+        if self.contains(&[TokenType::This]) {
+            return Ok(Expr::This {
+                keyword: self.previous().clone(),
+            });
+        }
         if self.contains(&[TokenType::Identifier]) {
             return Ok(Expr::Variable {
                 name: self.previous().clone(),

@@ -12,6 +12,7 @@ pub trait Visitor<T> {
     fn visit_call(&mut self, callee: &Expr, paren: &Token, arguments: &[Expr]) -> T;
     fn visit_get(&mut self, object: &Expr, name: &Token) -> T;
     fn visit_set(&mut self, object: &Expr, name: &Token, value: &Expr) -> T;
+    fn visit_this(&mut self, keyword: &Token) -> T;
 }
 
 pub trait Acceptor<T> {
@@ -48,6 +49,9 @@ pub enum Expr {
         object: Box<Expr>,
         name: Token,
         value: Box<Expr>,
+    },
+    This {
+        keyword: Token,
     },
     Variable {
         name: Token,
@@ -92,6 +96,7 @@ impl<T> Acceptor<T> for Expr {
                 name,
                 value,
             } => visitor.visit_set(object, name, value),
+            Expr::This { keyword } => visitor.visit_this(keyword),
         }
     }
 }
