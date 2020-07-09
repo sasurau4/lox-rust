@@ -9,12 +9,21 @@ use std::fmt;
 #[derive(Debug, Clone)]
 pub struct LoxClass {
     pub name: String,
+    super_class: Option<Box<LoxClass>>,
     methods: HashMap<String, LoxFunction>,
 }
 
 impl LoxClass {
-    pub fn new(name: String, methods: HashMap<String, LoxFunction>) -> LoxClass {
-        LoxClass { name, methods }
+    pub fn new(
+        name: String,
+        super_class: Option<Box<LoxClass>>,
+        methods: HashMap<String, LoxFunction>,
+    ) -> LoxClass {
+        LoxClass {
+            name,
+            super_class,
+            methods,
+        }
     }
     pub fn find_method(&self, name: String) -> Option<&LoxFunction> {
         self.methods.get(&name)

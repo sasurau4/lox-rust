@@ -54,6 +54,14 @@ impl Parser {
 
     fn class_declaration(&mut self) -> ParseResult<Stmt> {
         let name = self.consume(TokenType::Identifier, "Expect class name.")?;
+        let super_class = if self.contains(&[TokenType::Less]) {
+            self.consume(TokenType::Identifier, "Expect superclass name.")?;
+            Some(Expr::Variable {
+                name: self.previous().clone(),
+            })
+        } else {
+            None
+        };
         self.consume(TokenType::LeftBrace, "Expect '{' before class body.")?;
         let mut methods = vec![];
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
@@ -62,7 +70,11 @@ impl Parser {
         }
         self.consume(TokenType::RightBrace, "Expect '}' after class body.")?;
 
-        Ok(Stmt::Class { name, methods })
+        Ok(Stmt::Class {
+            name,
+            super_class,
+            methods,
+        })
     }
 
     fn statement(&mut self) -> ParseResult<Stmt> {
@@ -520,6 +532,7 @@ impl Parser {
         }
     }
 
+    // equal to match function on Java implementation
     fn contains(&mut self, types: &[TokenType]) -> bool {
         for token_type in types {
             if self.check(*token_type) {

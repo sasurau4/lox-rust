@@ -1,0 +1,11 @@
+class Oops {}
+
+class Oops < Oops {}
+
+var NotAClass = "I am totally not a class";
+
+class Subclass < NotAClass {}
+class Doughnut {
+}
+
+class BostonCream < Doughnut {}

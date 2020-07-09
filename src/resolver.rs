@@ -207,11 +207,31 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
         self.end_scope();
         Ok(())
     }
-    fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<()> {
+    fn visit_class_stmt(
+        &mut self,
+        name: &Token,
+        super_class: &Option<Expr>,
+        methods: &[Stmt],
+    ) -> Result<()> {
         let enclosing_class = self.current_class;
         self.current_class = ClassType::Class;
         self.declare(name)?;
         self.define(name);
+
+        if let Some(ext_super_class) = super_class {
+            if let Expr::Variable {
+                name: var_super_class,
+            } = ext_super_class
+            {
+                if name.lexeme == var_super_class.lexeme {
+                    return Err(Error::ResolveError(
+                        var_super_class.clone(),
+                        String::from("A class cannot inherit from itself."),
+                    ));
+                }
+            }
+            self.resolve_expr(ext_super_class)?
+        }
 
         self.begin_scope();
         let mut scope = self.scopes.pop().unwrap();

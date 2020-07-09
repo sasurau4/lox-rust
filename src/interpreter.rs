@@ -424,8 +424,28 @@ impl stmt::Visitor<Result<()>> for Interpreter {
         )?;
         Ok(())
     }
-    fn visit_class_stmt(&mut self, name: &Token, class_methods: &[Stmt]) -> Result<()> {
+    fn visit_class_stmt(
+        &mut self,
+        name: &Token,
+        super_class: &Option<Expr>,
+        class_methods: &[Stmt],
+    ) -> Result<()> {
         use super::callable::LoxFunction;
+        let evaluated_super_class = match super_class {
+            Some(sc) => match self.evaluate(sc)? {
+                Object::Class(lc) => Some(Box::new(lc)),
+                _ => {
+                    if let Expr::Variable { name: scname } = sc {
+                        return Err(Error::RuntimeError(
+                            scname.clone(),
+                            "Superclass must be a class.".to_string(),
+                        ));
+                    }
+                    unreachable!()
+                }
+            },
+            None => None,
+        };
         self.environment
             .borrow_mut()
             .define(name.lexeme.clone(), &Object::Literal(Literal::None));
@@ -449,7 +469,7 @@ impl stmt::Visitor<Result<()>> for Interpreter {
                 _ => unreachable!(),
             }
         }
-        let klass = LoxClass::new(name.lexeme.clone(), methods);
+        let klass = LoxClass::new(name.lexeme.clone(), evaluated_super_class, methods);
         self.environment
             .borrow_mut()
             .assign(name, &Object::Class(klass))?;
