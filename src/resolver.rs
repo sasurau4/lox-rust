@@ -218,13 +218,19 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
         scope.insert("this".to_string(), true);
         self.scopes.push(scope);
         for method in methods {
-            let declaration = FunctionType::Method;
             match method {
                 Stmt::Function {
                     name: func_name,
                     params,
                     body,
-                } => self.resolve_function(func_name, params, body, declaration)?,
+                } => {
+                    let declaration = if func_name.lexeme == "init" {
+                        FunctionType::Initializer
+                    } else {
+                        FunctionType::Method
+                    };
+                    self.resolve_function(func_name, params, body, declaration)?
+                }
                 _ => unreachable!(),
             }
         }
@@ -276,13 +282,20 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
                 String::from("Cannot return from top-level code."),
             ));
         }
-        match v {
-            Expr::Literal { value } => match value {
-                Literal::None => Ok(()),
-                _ => self.resolve_expr(v),
-            },
-            _ => self.resolve_expr(v),
+        // If you check current_function before, you should implement the last check for
+        // is_initializer inside LoxFuncti at 12.6.2 "returnint from init()" section
+        if let Expr::Literal { value } = v {
+            if value == &Literal::None {
+                return Ok(());
+            }
         }
+        if self.current_function == FunctionType::Initializer {
+            return Err(Error::ResolveError(
+                keyword.clone(),
+                "Cannot return a value from an initializer.".to_string(),
+            ));
+        }
+        self.resolve_expr(v)
     }
     fn visit_while_stmt(&mut self, condition: &Expr, body: &Stmt) -> Result<()> {
         self.resolve_expr(condition)?;

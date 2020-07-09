@@ -1,0 +1,16 @@
+print "valid early return in init";
+class Foo {
+  init() {
+    return;
+  }
+}
+print Foo();
+
+print "invalid return value from init";
+class Bar {
+  init() {
+    return "something else";
+  }
+}
+
+print Bar();

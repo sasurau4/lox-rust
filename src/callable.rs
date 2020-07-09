@@ -115,5 +115,6 @@ impl fmt::Display for Clock {
 pub enum FunctionType {
     None,
     Function,
+    Initializer,
     Method,
 }
