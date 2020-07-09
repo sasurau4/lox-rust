@@ -442,6 +442,7 @@ impl stmt::Visitor<Result<()>> for Interpreter {
                         params.to_vec(),
                         body.to_vec(),
                         Rc::clone(&self.environment),
+                        func_name.lexeme == "init",
                     );
                     methods.insert(func_name.lexeme.clone(), function);
                 }
@@ -472,6 +473,7 @@ impl stmt::Visitor<Result<()>> for Interpreter {
             params.to_vec(),
             body.to_vec(),
             Rc::clone(&self.environment),
+            false,
         ));
         self.environment
             .borrow_mut()

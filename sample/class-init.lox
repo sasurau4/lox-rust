@@ -1,0 +1,12 @@
+class Foo {
+  init() {
+    this.bar = "piyo";
+  }
+}
+
+var foo = Foo();
+print "should print 'piyo'";
+print foo.bar;
+
+print "should print this instance";
+print foo.init();

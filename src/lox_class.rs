@@ -21,11 +21,21 @@ impl LoxClass {
     }
 }
 impl LoxCallable for LoxClass {
-    fn call(&self, _interpreter: &mut Interpreter, _arguments: Vec<Object>) -> Result<Object> {
-        Ok(Object::Instance(LoxInstance::new(self.clone())))
+    fn call(&self, interpreter: &mut Interpreter, arguments: Vec<Object>) -> Result<Object> {
+        let instance = LoxInstance::new(self.clone());
+        if let Some(initializer) = self.find_method("init".to_string()) {
+            initializer
+                .bind(instance.clone())
+                .call(interpreter, arguments)?;
+        }
+        Ok(Object::Instance(instance))
     }
     fn arity(&self) -> usize {
-        0
+        if let Some(initializer) = self.find_method("init".to_string()) {
+            initializer.arity()
+        } else {
+            0
+        }
     }
 }
 
@@ -33,4 +43,10 @@ impl fmt::Display for LoxClass {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.name)
     }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum ClassType {
+    None,
+    Class,
 }

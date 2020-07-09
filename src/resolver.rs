@@ -3,6 +3,7 @@ use super::error::{resolve_error, Error, Result};
 use super::expr::Expr;
 use super::expr::{Acceptor as ExprAcceptor, Visitor as ExprVisitor};
 use super::interpreter::Interpreter;
+use super::lox_class::ClassType;
 use super::stmt::{Acceptor as StmtAcceptor, Stmt, Visitor as StmtVisitor};
 use super::token::Literal;
 use super::token::Token;
@@ -13,6 +14,7 @@ pub struct Resolver<'a> {
     interpreter: &'a mut Interpreter,
     pub scopes: Vec<HashMap<String, bool>>,
     current_function: FunctionType,
+    current_class: ClassType,
 }
 
 impl<'a> Resolver<'a> {
@@ -21,6 +23,7 @@ impl<'a> Resolver<'a> {
             interpreter,
             scopes: Vec::new(),
             current_function: FunctionType::None,
+            current_class: ClassType::None,
         }
     }
 
@@ -177,6 +180,12 @@ impl<'a> ExprVisitor<Result<()>> for Resolver<'a> {
         self.resolve_expr(object)
     }
     fn visit_this(&mut self, keyword: &Token) -> Result<()> {
+        if self.current_class == ClassType::None {
+            return Err(Error::ResolveError(
+                keyword.clone(),
+                "Cannot use 'this' outside of a class.".to_string(),
+            ));
+        }
         let expr = Expr::This {
             keyword: keyword.clone(),
         };
@@ -199,6 +208,8 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
         Ok(())
     }
     fn visit_class_stmt(&mut self, name: &Token, methods: &[Stmt]) -> Result<()> {
+        let enclosing_class = self.current_class;
+        self.current_class = ClassType::Class;
         self.declare(name)?;
         self.define(name);
 
@@ -218,6 +229,7 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
             }
         }
         self.end_scope();
+        self.current_class = enclosing_class;
         Ok(())
     }
 

@@ -23,6 +23,7 @@ pub struct LoxFunction {
     params: Vec<Token>,
     body: Vec<Stmt>,
     closure: Rc<RefCell<Environment>>,
+    is_initializer: bool,
 }
 
 impl LoxFunction {
@@ -31,12 +32,14 @@ impl LoxFunction {
         params: Vec<Token>,
         body: Vec<Stmt>,
         env: Rc<RefCell<Environment>>,
+        is_initializer: bool,
     ) -> LoxFunction {
         LoxFunction {
             name,
             params,
             body,
             closure: env,
+            is_initializer,
         }
     }
 
@@ -51,6 +54,7 @@ impl LoxFunction {
             self.params.clone(),
             self.body.clone(),
             Rc::new(RefCell::new(environement)),
+            self.is_initializer,
         )
     }
 }
@@ -65,7 +69,12 @@ impl LoxCallable for LoxFunction {
             environement.define(param.lexeme.clone(), arg)
         }
         match interpreter.execute_block(&self.body, environement) {
-            Ok(_) => Ok(Object::Literal(Literal::None)),
+            Ok(_) => {
+                if self.is_initializer {
+                    return self.closure.borrow().get_at(0, "this".to_string());
+                }
+                Ok(Object::Literal(Literal::None))
+            }
             Err(Error::Return(return_value)) => Ok(return_value),
             Err(e) => Err(e),
         }
