@@ -26,7 +26,14 @@ impl LoxClass {
         }
     }
     pub fn find_method(&self, name: String) -> Option<&LoxFunction> {
-        self.methods.get(&name)
+        if let Some(m) = self.methods.get(&name) {
+            return Some(m);
+        }
+        let LoxClass { super_class, .. } = self;
+        if let Some(ext_super_class) = super_class {
+            return ext_super_class.find_method(name);
+        }
+        None
     }
 }
 impl LoxCallable for LoxClass {
