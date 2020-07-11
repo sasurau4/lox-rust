@@ -474,6 +474,12 @@ impl Parser {
                 value: self.previous().literal.clone(),
             });
         }
+        if self.contains(&[TokenType::Super]) {
+            let keyword = self.previous().clone();
+            self.consume(TokenType::Dot, "Expect '.' after 'super'.")?;
+            let method = self.consume(TokenType::Identifier, "Expect superclass method name.")?;
+            return Ok(Expr::Super { keyword, method });
+        }
         if self.contains(&[TokenType::This]) {
             return Ok(Expr::This {
                 keyword: self.previous().clone(),

@@ -179,6 +179,13 @@ impl<'a> ExprVisitor<Result<()>> for Resolver<'a> {
         self.resolve_expr(value)?;
         self.resolve_expr(object)
     }
+    fn visit_super(&mut self, keyword: &Token, method: &Token) -> Result<()> {
+        let expr = Expr::Super {
+            keyword: keyword.clone(),
+            method: method.clone(),
+        };
+        self.resolve_local(expr, keyword)
+    }
     fn visit_this(&mut self, keyword: &Token) -> Result<()> {
         if self.current_class == ClassType::None {
             return Err(Error::ResolveError(
@@ -233,6 +240,13 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
             self.resolve_expr(ext_super_class)?
         }
 
+        if super_class.is_some() {
+            self.begin_scope();
+            let mut scope = self.scopes.pop().unwrap();
+            scope.insert("super".to_string(), true);
+            self.scopes.push(scope);
+        }
+
         self.begin_scope();
         let mut scope = self.scopes.pop().unwrap();
         scope.insert("this".to_string(), true);
@@ -255,6 +269,9 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
             }
         }
         self.end_scope();
+        if super_class.is_some() {
+            self.end_scope();
+        }
         self.current_class = enclosing_class;
         Ok(())
     }
