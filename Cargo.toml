@@ -1,21 +1,2 @@
-[package]
-name = "lox-rust"
-version = "0.1.0"
-authors = ["Daiki Ihara <sasurau4@gmail.com>"]
-edition = "2018"
-default-run = "lox-rust"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-clap = "3.0.0-beta.1"
-log = "0.4.0"
-env_logger = "0.7.1"
-
-[[bin]]
-name = "lox-rust"
-path = "src/main.rs"
-
-[[bin]]
-name = "generate-ast"
-path = "tools/generate_ast.rs"
+[workspace]
+members = ["interpreter"]

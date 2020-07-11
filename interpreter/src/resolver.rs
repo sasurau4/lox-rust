@@ -8,6 +8,7 @@ use super::stmt::{Acceptor as StmtAcceptor, Stmt, Visitor as StmtVisitor};
 use super::token::Literal;
 use super::token::Token;
 use std::collections::HashMap;
+use std::num::Wrapping;
 
 #[derive(Debug)]
 pub struct Resolver<'a> {
@@ -72,7 +73,7 @@ impl<'a> Resolver<'a> {
         #[allow(unused_comparisons)]
         #[allow(clippy::absurd_extreme_comparisons)]
         while i >= 0 {
-            if let Some(scope) = self.scopes.get(i) {
+            if let Some(scope) = self.scopes.get(0) {
                 if let Some(_r) = scope.get(&name.lexeme) {
                     self.interpreter.resolve(expr, scopes_count - 1 - i)?;
                     return Ok(());
