@@ -96,7 +96,7 @@ pub struct Clock {}
 impl LoxCallable for Clock {
     fn call(&self, _interpreter: &mut Interpreter, _arguments: Vec<Object>) -> Result<Object> {
         match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-            Ok(n) => Ok(Object::Literal(Literal::Isize(n.as_secs() as isize))),
+            Ok(n) => Ok(Object::Literal(Literal::Isize(n.as_millis() as isize))),
             Err(_) => panic!("SystemTime before UNIX EPOCH!"),
         }
     }

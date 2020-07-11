@@ -4,6 +4,8 @@ fun fib(n) {
 }
 
 var before = clock();
-print fib(40);
+print "result:";
+print fib(30);
 var after = clock();
-print after - before;
+print "time: secs";
+print (after - before) / 1000;

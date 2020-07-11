@@ -8,7 +8,6 @@ use super::stmt::{Acceptor as StmtAcceptor, Stmt, Visitor as StmtVisitor};
 use super::token::Literal;
 use super::token::Token;
 use std::collections::HashMap;
-use std::num::Wrapping;
 
 #[derive(Debug)]
 pub struct Resolver<'a> {
@@ -65,17 +64,15 @@ impl<'a> Resolver<'a> {
     }
 
     fn resolve_local(&mut self, expr: Expr, name: &Token) -> Result<()> {
-        if self.scopes.is_empty() {
-            return Ok(());
-        }
         let scopes_count = self.scopes.len();
-        let mut i = scopes_count - 1;
-        #[allow(unused_comparisons)]
-        #[allow(clippy::absurd_extreme_comparisons)]
-        while i >= 0 {
-            if let Some(scope) = self.scopes.get(0) {
+        let mut i = scopes_count;
+        loop {
+            if i == 0 {
+                break;
+            }
+            if let Some(scope) = self.scopes.get(i - 1) {
                 if let Some(_r) = scope.get(&name.lexeme) {
-                    self.interpreter.resolve(expr, scopes_count - 1 - i)?;
+                    self.interpreter.resolve(expr, scopes_count - 1 - (i - 1))?;
                     return Ok(());
                 }
             }
