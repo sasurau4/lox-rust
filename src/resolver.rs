@@ -180,11 +180,23 @@ impl<'a> ExprVisitor<Result<()>> for Resolver<'a> {
         self.resolve_expr(object)
     }
     fn visit_super(&mut self, keyword: &Token, method: &Token) -> Result<()> {
-        let expr = Expr::Super {
-            keyword: keyword.clone(),
-            method: method.clone(),
-        };
-        self.resolve_local(expr, keyword)
+        match self.current_class {
+            ClassType::None => Err(Error::ResolveError(
+                keyword.clone(),
+                "Cannot use 'super' outside of a class.".to_string(),
+            )),
+            ClassType::Class => Err(Error::ResolveError(
+                keyword.clone(),
+                "Cannot use 'super' in a class with no superclass.".to_string(),
+            )),
+            ClassType::SubClass => {
+                let expr = Expr::Super {
+                    keyword: keyword.clone(),
+                    method: method.clone(),
+                };
+                self.resolve_local(expr, keyword)
+            }
+        }
     }
     fn visit_this(&mut self, keyword: &Token) -> Result<()> {
         if self.current_class == ClassType::None {
@@ -237,6 +249,7 @@ impl<'a> StmtVisitor<Result<()>> for Resolver<'a> {
                     ));
                 }
             }
+            self.current_class = ClassType::SubClass;
             self.resolve_expr(ext_super_class)?
         }
 

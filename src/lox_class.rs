@@ -65,4 +65,5 @@ impl fmt::Display for LoxClass {
 pub enum ClassType {
     None,
     Class,
+    SubClass,
 }
